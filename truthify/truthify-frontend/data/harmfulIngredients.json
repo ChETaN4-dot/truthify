@@ -1,0 +1,22 @@
+{
+  "Sodium Benzoate": {
+    "risk": "Moderate",
+    "reason": "May cause hyperactivity in children",
+    "category": "Preservative"
+  },
+  "Artificial Flavor": {
+    "risk": "Moderate",
+    "reason": "Synthetic compound with unknown long-term effects",
+    "category": "Additive"
+  },
+  "Palm Oil": {
+    "risk": "Environmental",
+    "reason": "Linked to deforestation",
+    "category": "Oil"
+  },
+  "Sugar": {
+    "risk": "High",
+    "reason": "Excess sugar increases diabetes risk",
+    "category": "Sweetener"
+  }
+}

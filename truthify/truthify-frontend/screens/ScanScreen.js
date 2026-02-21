@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
-    Alert, Image, StatusBar
+    Alert, Image, StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -69,155 +70,115 @@ export default function ScanScreen({ navigation, route }) {
     const getScoreColor = (s) => s >= 70 ? C.success : s >= 40 ? C.warning : C.danger;
 
     return (
+        <SafeAreaView style={styles.safe}>
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={C.bg} />
-            <ScrollView contentContainerStyle={styles.scroll}>
+            <StatusBar barStyle="light-content" backgroundColor={C.cyan} />
 
-                {/* Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.greeting}>{getGreeting()}, {userName} 👋</Text>
-                        <Text style={styles.headerSub}>What are you scanning today?</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.avatarBtn}>
-                        <LinearGradient colors={C.gradCyan} style={styles.avatar}>
-                            <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
+            {/* TOP BRAND BAR */}
+            <View style={styles.appBar}>
+                <Text style={styles.appTitle}>Truthify</Text>
+
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Profile')}
+                    style={styles.topAvatarBtn}
+                >
+                    <LinearGradient colors={C.gradCyan} style={styles.topAvatar}>
+                        <Text style={styles.topAvatarText}>
+                            {userName[0]?.toUpperCase()}
+                        </Text>
+                    </LinearGradient>
+                 </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+            {/* HERO GREETING */}
+            <View style={styles.hero}>
+                <Text style={styles.heroGreeting}>
+                {getGreeting()},
+                </Text>
+
+                <Text style={styles.heroName}>
+                    {userName.charAt(0).toUpperCase() + userName.slice(1)}
+                </Text>
+
+                <Text style={styles.heroSub}>
+                Let’s uncover what’s really inside your food.
+                </Text>
+            </View>
+
+            {/* ORIGINAL CONTENT STARTS */}
+            <View style={styles.header}>
+                <View>
+                <Text style={styles.headerSub}>Choose your scan mode</Text>
+                </View>
+            </View>
+
+            {recentScans.length > 0 && (
+                <View style={styles.statsRow}>
+                <View style={styles.statPill}>
+                    <Text style={styles.statVal}>{recentScans.length}</Text>
+                    <Text style={styles.statLbl}>Scanned</Text>
                 </View>
 
-                {/* Quick Stats */}
-                {recentScans.length > 0 && (
-                    <View style={styles.statsRow}>
-                        <View style={styles.statPill}>
-                            <Text style={styles.statVal}>{recentScans.length}</Text>
-                            <Text style={styles.statLbl}>Scanned</Text>
-                        </View>
-                        <View style={[styles.statPill, { marginLeft: 10 }]}>
-                            <Text style={[styles.statVal, { color: getScoreColor(Math.round(recentScans.reduce((a, s) => a + (s.overallScore || 0), 0) / recentScans.length)) }]}>
-                                {Math.round(recentScans.reduce((a, s) => a + (s.overallScore || 0), 0) / recentScans.length)}
-                            </Text>
-                            <Text style={styles.statLbl}>Avg Score</Text>
-                        </View>
-                    </View>
-                )}
+                <View style={[styles.statPill, { marginLeft: 10 }]}>
+                    <Text style={styles.statVal}>
+                    {Math.round(
+                        recentScans.reduce((a, s) => a + (s.overallScore || 0), 0) /
+                        recentScans.length
+                    )}
+                    </Text>
+                    <Text style={styles.statLbl}>Avg Score</Text>
+                </View>
+                </View>
+            )}
 
-                {/* Mode Toggle */}
-                <View style={styles.modeRow}>
-                    <TouchableOpacity style={[styles.modeBtn, mode === 'single' && styles.modeBtnActive]} onPress={() => { setMode('single'); resetCompare(); }}>
-                        <Ionicons name="scan-outline" size={16} color={mode === 'single' ? '#fff' : C.textSub} />
-                        <Text style={[styles.modeTxt, mode === 'single' && { color: '#fff' }]}>  Single Scan</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.modeBtn, mode === 'compare' && styles.modeBtnActive]} onPress={() => { setMode('compare'); resetCompare(); }}>
-                        <Ionicons name="git-compare-outline" size={16} color={mode === 'compare' ? '#fff' : C.textSub} />
-                        <Text style={[styles.modeTxt, mode === 'compare' && { color: '#fff' }]}>  Compare Labels</Text>
-                    </TouchableOpacity>
+            {/* KEEP ALL YOUR EXISTING MODE + SCAN UI BELOW */}
+            {mode === 'single' ? (
+                <>
+                <View style={styles.viewfinder}>
+                    <View style={[styles.corner, styles.tl]} />
+                    <View style={[styles.corner, styles.tr]} />
+                    <View style={[styles.corner, styles.bl]} />
+                    <View style={[styles.corner, styles.br]} />
+                    <Ionicons name="scan-outline" size={56} color={C.textMuted} />
+                    <Text style={styles.vfHint}>Point at ingredient label</Text>
                 </View>
 
-                {mode === 'single' ? (
-                    <>
-                        {/* Viewfinder */}
-                        <View style={styles.viewfinder}>
-                            <View style={[styles.corner, styles.tl]} />
-                            <View style={[styles.corner, styles.tr]} />
-                            <View style={[styles.corner, styles.bl]} />
-                            <View style={[styles.corner, styles.br]} />
-                            <Ionicons name="scan-outline" size={56} color={C.textMuted} />
-                            <Text style={styles.vfHint}>Point at ingredient label</Text>
-                        </View>
+                <TouchableOpacity
+                    onPress={() => startScan('camera')}
+                    activeOpacity={0.85}
+                    style={styles.primaryBtnWrap}
+                >
+                    <LinearGradient colors={C.gradCyan} style={styles.primaryBtn}>
+                    <Ionicons name="camera-outline" size={20} color="#fff" />
+                    <Text style={styles.primaryBtnTxt}>  SCAN LABEL</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
 
-                        {/* Buttons */}
-                        <TouchableOpacity onPress={() => startScan('camera')} activeOpacity={0.85} style={styles.primaryBtnWrap}>
-                            <LinearGradient colors={C.gradCyan} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtn}>
-                                <Ionicons name="camera-outline" size={20} color="#fff" />
-                                <Text style={styles.primaryBtnTxt}>  SCAN LABEL</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                <View style={styles.orRow}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orTxt}>or</Text>
+                    <View style={styles.orLine} />
+                </View>
 
-                        <View style={styles.orRow}><View style={styles.orLine} /><Text style={styles.orTxt}>or</Text><View style={styles.orLine} /></View>
+                <TouchableOpacity
+                    onPress={() => startScan('gallery')}
+                    style={styles.outlineBtn}
+                    activeOpacity={0.85}
+                >
+                    <Ionicons name="image-outline" size={18} color={C.cyan} />
+                    <Text style={styles.outlineBtnTxt}>
+                    Upload from Gallery
+                    </Text>
+                </TouchableOpacity>
+                </>
+            ) : null}
 
-                        <TouchableOpacity onPress={() => startScan('gallery')} style={styles.outlineBtn} activeOpacity={0.85}>
-                            <Ionicons name="image-outline" size={18} color={C.cyan} />
-                            <Text style={styles.outlineBtnTxt}>  Upload from Gallery</Text>
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <>
-                        <View style={styles.compareInfo}>
-                            <Ionicons name="information-circle-outline" size={16} color={C.cyan} />
-                            <Text style={styles.compareInfoTxt}>  Upload <Text style={{ color: C.cyan }}>front label</Text> first, then <Text style={{ color: C.success }}>back ingredients</Text>. AI detects greenwashing.</Text>
-                        </View>
-
-                        {/* Front */}
-                        <View style={styles.compareCard}>
-                            <Text style={styles.compareCardTitle}>① Front Label (Claims)</Text>
-                            {frontUri ? (
-                                <>
-                                    <Image source={{ uri: frontUri }} style={styles.compareImg} />
-                                    <Text style={[styles.compareCardTitle, { color: C.success, marginTop: 8 }]}>✓ Captured — now upload back label</Text>
-                                </>
-                            ) : (
-                                <View style={styles.compareBtns}>
-                                    <TouchableOpacity style={styles.compareBtn} onPress={() => pickFront('camera')}>
-                                        <Ionicons name="camera-outline" size={18} color={C.cyan} />
-                                        <Text style={styles.compareBtnTxt}>Camera</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.compareBtn} onPress={() => pickFront('gallery')}>
-                                        <Ionicons name="image-outline" size={18} color={C.cyan} />
-                                        <Text style={styles.compareBtnTxt}>Gallery</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-
-                        {/* Back */}
-                        <View style={[styles.compareCard, !frontUri && { opacity: 0.35 }]}>
-                            <Text style={styles.compareCardTitle}>② Back Label (Ingredients)</Text>
-                            <View style={styles.compareBtns}>
-                                <TouchableOpacity style={styles.compareBtn} onPress={() => frontUri && pickBack('camera')} disabled={!frontUri}>
-                                    <Ionicons name="camera-outline" size={18} color={C.cyan} />
-                                    <Text style={styles.compareBtnTxt}>Camera</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.compareBtn} onPress={() => frontUri && pickBack('gallery')} disabled={!frontUri}>
-                                    <Ionicons name="image-outline" size={18} color={C.cyan} />
-                                    <Text style={styles.compareBtnTxt}>Gallery</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {frontUri && (
-                            <TouchableOpacity onPress={resetCompare} style={{ alignItems: 'center', marginTop: 8 }}>
-                                <Text style={{ color: C.textSub, fontSize: 13 }}>↺ Reset</Text>
-                            </TouchableOpacity>
-                        )}
-                    </>
-                )}
-
-                {/* Recent Scans */}
-                {recentScans.length > 0 && (
-                    <View style={{ marginTop: 28 }}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Recent Scans</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('History')}>
-                                <Text style={styles.seeAll}>See All →</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {recentScans.map(s => (
-                                <TouchableOpacity key={s.id} style={styles.recentCard}
-                                    onPress={() => navigation.navigate('Results', { analysis: s, imageUri: s.imageUri })}>
-                                    <Text style={styles.recentName} numberOfLines={1}>{s.productName || 'Unknown'}</Text>
-                                    <View style={[styles.recentScore, { backgroundColor: (s.overallScore >= 70 ? C.success : s.overallScore >= 40 ? C.warning : C.danger) + '22' }]}>
-                                        <Text style={[styles.recentScoreVal, { color: s.overallScore >= 70 ? C.success : s.overallScore >= 40 ? C.warning : C.danger }]}>{s.overallScore}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                )}
             </ScrollView>
         </View>
-    );
+        </SafeAreaView>
+        );
 }
 
 const styles = StyleSheet.create({
@@ -270,4 +231,66 @@ const styles = StyleSheet.create({
     recentName: { color: C.text, fontWeight: '600', fontSize: 13, marginBottom: 8 },
     recentScore: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
     recentScoreVal: { fontWeight: '900', fontSize: 16 },
+    appBar: {
+    height: 65,
+    backgroundColor: C.cyan,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    elevation: 6,
+    },
+
+    topAvatarBtn: {
+    borderRadius: 20,
+    },
+
+    appTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    },
+
+    topAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    },
+
+    topAvatarText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 16,
+    },
+
+    hero: {
+    marginTop: 50,
+    marginBottom: 90,
+    },
+
+    heroGreeting: {
+    fontSize: 44,
+    color: C.text,
+    fontWeight: '900',
+    lineHeight: 50,
+    },
+
+    heroName: {
+    fontSize: 44,
+    fontWeight: '900',
+    color: C.text,
+    lineHeight: 50,
+    },
+
+    heroSub: {
+    fontSize: 16,
+    color: C.textSub,
+    marginTop: 12,
+    maxWidth: '85%'},
+    
+    safe:{flex:1, backgroundColor:C.bg,},
+
 });

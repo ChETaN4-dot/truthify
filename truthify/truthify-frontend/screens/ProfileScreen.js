@@ -56,7 +56,7 @@ export default function ProfileScreen({ userName, onLogout }) {
                         style={styles.nameInput}
                         value={name}
                         onChangeText={setName}
-                        placeholder="Your name"
+                        placeholder= "Your Name"
                         placeholderTextColor={C.textMuted}
                     />
                     <Text style={styles.memberSince}>Member since {new Date(profile.memberSince || Date.now()).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>

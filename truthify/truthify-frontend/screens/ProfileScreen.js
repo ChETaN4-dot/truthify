@@ -70,21 +70,38 @@ export default function ProfileScreen({ userName, onLogout }) {
             </View>
 
             {/* Health Filters */}
+            {/* Health Preferences */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Health Filters</Text>
-                <Text style={styles.cardSub}>Personalizes every AI analysis for you</Text>
-                {TOGGLES.map(({ key, label, emoji }, i) => (
-                    <View key={key} style={[styles.row, i === TOGGLES.length - 1 && { borderBottomWidth: 0 }]}>
-                        <Text style={styles.rowLabel}>{emoji}  {label}</Text>
-                        <Switch
-                            value={profile.filters?.[key] || false}
-                            onValueChange={() => toggleFilter(key)}
-                            trackColor={{ false: C.elevated, true: C.cyan + 'AA' }}
-                            thumbColor={profile.filters?.[key] ? C.cyan : '#555'}
-                        />
-                    </View>
-                ))}
+            <Text style={styles.cardTitle}>Health Preferences</Text>
+            <Text style={styles.cardSub}>Tap to personalize your scans</Text>
+
+            <View style={styles.tileGrid}>
+                {TOGGLES.map(({ key, label, emoji }) => {
+                const active = profile.filters?.[key];
+
+                return (
+                    <TouchableOpacity
+                    key={key}
+                    activeOpacity={0.85}
+                    onPress={() => toggleFilter(key)}
+                    style={[
+                        styles.prefTile,
+                        active && styles.prefTileActive
+                    ]}
+                    >
+                    <Text style={styles.prefEmoji}>{emoji}</Text>
+                    <Text style={[
+                        styles.prefLabel,
+                        active && styles.prefLabelActive
+                    ]}>
+                        {label}
+                    </Text>
+                    </TouchableOpacity>
+                );
+                })}
             </View>
+            </View>
+            
 
             {/* Language */}
             <View style={styles.card}>
@@ -144,4 +161,28 @@ const styles = StyleSheet.create({
     saveWrap: { borderRadius: 50, overflow: 'hidden' },
     saveBtn: { height: 54, justifyContent: 'center', alignItems: 'center' },
     saveTxt: { color: '#fff', fontWeight: '800', fontSize: 16 },
+    tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',},
+    prefTile: {width: '47%',  backgroundColor: '#f4fff8',  borderRadius: 18,  paddingVertical: 18,  alignItems: 'center',  marginBottom: 14,  borderWidth: 1.5,  borderColor: '#b7e4c7',  shadowColor: '#1E8A44',  shadowOpacity: 0.08,  shadowRadius: 10,  elevation: 4,},
+    prefTileActive: {
+  backgroundColor: '#1E8A44',
+  borderColor: '#1E8A44',
+},
+
+prefEmoji: {
+  fontSize: 30,
+  marginBottom: 6,
+},
+
+prefLabel: {
+  fontSize: 12,
+  fontWeight: '700',
+  color: '#1E8A44',
+  textAlign: 'center',
+},
+
+prefLabelActive: {
+  color: '#ffffff',
+},
+
+
 });

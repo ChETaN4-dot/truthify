@@ -230,17 +230,20 @@ export default function App() {
               transform: [{ scale: circScale }],
             }]}
           >
-            {/* TF — big and bold */}
-            <Animated.Text
-              style={[s.tfText, {
+          {/* Animated Logo */}
+          <View style={s.glow} />
+          <Animated.Image
+            source={require('./assets/newlogo.png')}
+            style={[
+              s.splashLogo,
+              {
                 opacity: tfOp,
                 transform: [{ scale: tfScale }],
-              }]}
-            >
-              TF
-            </Animated.Text>
-          </Animated.View>
-
+              },
+            ]}
+            resizeMode="contain"
+          />
+        </Animated.View>
           {/* Scan line */}
           <Animated.View
             style={[s.scanLine, {
@@ -270,7 +273,14 @@ export default function App() {
         <Animated.Text
           style={[s.brandText, {
             opacity: nameOp,
-            transform: [{ translateY: nameY }],
+            transform: [{ scale: tfScale },
+            {
+              translateY: tfScale.interpolate({
+                inputRange: [0.9, 1],
+                outputRange: [6, 0],
+              }),
+            },
+          ],
           }]}
         >
           TRUTHIFY
@@ -318,7 +328,7 @@ const s = StyleSheet.create({
   },
   greenCircle: {
     position: 'absolute',
-    backgroundColor: '#1E8A44',   // your exact logo green
+    backgroundColor: '#e9fdf1',   // your exact logo green
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#1E8A44',
@@ -360,14 +370,27 @@ const s = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+    splashLogo: {
+    width: LOGO * 1,
+    height: LOGO * 1,
+  },
   brandText: {
-    fontFamily: 'Montserrat-Black',  // npx expo install @expo-google-fonts/montserrat
-    fontSize: width * 0.1,
-    letterSpacing: 3,
-    color: '#145C2E',                // your exact dark green
-    textShadowColor: 'rgba(20,92,46,0.1)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+   fontFamily: 'Montserrat-SemiBold',
+   fontSize: width * 0.050,
+   letterSpacing: 2,
+   color: '#1E8A44',
+   textTransform: 'uppercase',
+  },
+  glow: {
+  position: 'absolute',
+  width: LOGO * 0.95,
+  height: LOGO * 0.95,
+  borderRadius: LOGO,
+  backgroundColor: '#2DB55D',
+  opacity: 0.18,
+  shadowColor: '#2DB55D',
+  shadowOpacity: 0.9,
+  shadowRadius: 40,
   },
 });
 

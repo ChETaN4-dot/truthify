@@ -1,32 +1,26 @@
 export const C = {
-    // Backgrounds
-    bg: '#0A0A12',
-    surface: '#111120',
-    elevated: '#18182A',
-    card: '#1C1C30',
+  /* Core background */
+  bg: '#e9fff2',            // soft green-white base
+  surface: '#f4fff8',       // cards
+  elevated: '#ffffff',      // chips & inputs
 
-    // Accents
-    cyan: '#00D4FF',
-    purple: '#8B5CF6',
-    gold: '#FFD700',
+  /* Greens */
+  primary: '#1E8A44',
+  secondary: '#27A050',
+  lightGreen: '#b7e4c7',
+  cyan: '#1E8A44',           // reuse main green
 
-    // Status
-    success: '#22C55E',
-    warning: '#F59E0B',
-    danger: '#EF4444',
+  /* Borders */
+  border: '#b7e4c7',
 
-    // Text
-    text: '#F0F0FF',
-    textSub: '#8888AA',
-    textMuted: '#44445A',
+  /* Text */
+  text: '#145C2E',
+  textSub: '#2f6f4e',
+  textMuted: '#7fbf9a',
 
-    // Borders
-    border: 'rgba(255,255,255,0.07)',
-    borderHi: 'rgba(255,255,255,0.14)',
+  /* Status */
+  danger: '#e74c3c',
 
-    // Gradients (arrays for LinearGradient)
-    gradCyan: ['#00D4FF', '#8B5CF6'],
-    gradDanger: ['#EF4444', '#B91C1C'],
-    gradSuccess: ['#22C55E', '#16A34A'],
-    gradGold: ['#FFD700', '#F59E0B'],
+  /* Gradients */
+  gradCyan: ['#1E8A44', '#27A050', '#2DB55D'],
 };

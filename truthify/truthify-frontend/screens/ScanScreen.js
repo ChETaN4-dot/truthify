@@ -95,7 +95,7 @@ export default function ScanScreen({ navigation, route }) {
             {/* HERO GREETING */}
             <View style={styles.hero}>
                 <Text style={styles.heroGreeting}>
-                {getGreeting()},
+                    {getGreeting()},
                 </Text>
 
                 <Text style={styles.heroName}>
@@ -103,77 +103,150 @@ export default function ScanScreen({ navigation, route }) {
                 </Text>
 
                 <Text style={styles.heroSub}>
-                Let’s uncover what’s really inside your food.
+                    Let’s uncover what’s really inside your food.
                 </Text>
             </View>
 
-            {/* ORIGINAL CONTENT STARTS */}
-            <View style={styles.header}>
-                <View>
-                <Text style={styles.headerSub}>Choose your scan mode</Text>
-                </View>
+            {/* MODE TOGGLE (RESTORED) */}
+            <View style={styles.modeRow}>
+                <TouchableOpacity
+                    style={[styles.modeBtn, mode === 'single' && styles.modeBtnActive]}
+                    onPress={() => { setMode('single'); resetCompare(); }}
+                >
+                    <Ionicons name="scan-outline" size={16} color={mode === 'single' ? '#fff' : C.textSub} />
+                    <Text style={[styles.modeTxt, mode === 'single' && { color: '#fff' }]}>  Single Scan</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.modeBtn, mode === 'compare' && styles.modeBtnActive]}
+                    onPress={() => { setMode('compare'); resetCompare(); }}
+                >
+                    <Ionicons name="git-compare-outline" size={16} color={mode === 'compare' ? '#fff' : C.textSub} />
+                    <Text style={[styles.modeTxt, mode === 'compare' && { color: '#fff' }]}>  Compare Labels</Text>
+                </TouchableOpacity>
             </View>
 
+            {/* STATS */}
             {recentScans.length > 0 && (
                 <View style={styles.statsRow}>
-                <View style={styles.statPill}>
-                    <Text style={styles.statVal}>{recentScans.length}</Text>
-                    <Text style={styles.statLbl}>Scanned</Text>
-                </View>
+                    <View style={styles.statPill}>
+                        <Text style={styles.statVal}>{recentScans.length}</Text>
+                        <Text style={styles.statLbl}>Scanned</Text>
+                    </View>
 
-                <View style={[styles.statPill, { marginLeft: 10 }]}>
-                    <Text style={styles.statVal}>
-                    {Math.round(
-                        recentScans.reduce((a, s) => a + (s.overallScore || 0), 0) /
-                        recentScans.length
-                    )}
-                    </Text>
-                    <Text style={styles.statLbl}>Avg Score</Text>
-                </View>
+                    <View style={[styles.statPill, { marginLeft: 10 }]}>
+                        <Text style={styles.statVal}>
+                            {Math.round(
+                                recentScans.reduce((a, s) => a + (s.overallScore || 0), 0) /
+                                recentScans.length
+                            )}
+                        </Text>
+                        <Text style={styles.statLbl}>Avg Score</Text>
+                    </View>
                 </View>
             )}
 
-            {/* KEEP ALL YOUR EXISTING MODE + SCAN UI BELOW */}
+            {/* SINGLE SCAN MODE */}
             {mode === 'single' ? (
-                <>
-                <View style={styles.viewfinder}>
-                    <View style={[styles.corner, styles.tl]} />
-                    <View style={[styles.corner, styles.tr]} />
-                    <View style={[styles.corner, styles.bl]} />
-                    <View style={[styles.corner, styles.br]} />
-                    <Ionicons name="scan-outline" size={56} color={C.textMuted} />
-                    <Text style={styles.vfHint}>Point at ingredient label</Text>
-                </View>
+            <>
+            <View style={styles.viewfinder}>
+            <View style={[styles.corner, styles.tl]} />
+            <View style={[styles.corner, styles.tr]} />
+            <View style={[styles.corner, styles.bl]} />
+            <View style={[styles.corner, styles.br]} />
 
-                <TouchableOpacity
-                    onPress={() => startScan('camera')}
-                    activeOpacity={0.85}
-                    style={styles.primaryBtnWrap}
-                >
-                    <LinearGradient colors={C.gradCyan} style={styles.primaryBtn}>
-                    <Ionicons name="camera-outline" size={20} color="#fff" />
-                    <Text style={styles.primaryBtnTxt}>  SCAN LABEL</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
+            <Ionicons name="scan-outline" size={56} color={C.textMuted} />
 
-                <View style={styles.orRow}>
-                    <View style={styles.orLine} />
-                    <Text style={styles.orTxt}>or</Text>
-                    <View style={styles.orLine} />
-                </View>
+            <Text style={styles.vfHint}>Point at ingredient label</Text>
+            </View>
 
-                <TouchableOpacity
-                    onPress={() => startScan('gallery')}
-                    style={styles.outlineBtn}
-                    activeOpacity={0.85}
-                >
-                    <Ionicons name="image-outline" size={18} color={C.cyan} />
-                    <Text style={styles.outlineBtnTxt}>
-                    Upload from Gallery
-                    </Text>
-                </TouchableOpacity>
-                </>
-            ) : null}
+            <TouchableOpacity
+            onPress={() => startScan('camera')}
+            activeOpacity={0.85}
+            style={styles.primaryBtnWrap}
+            >
+            <LinearGradient colors={C.gradCyan} style={styles.primaryBtn}>
+            <Ionicons name="camera-outline" size={20} color="#fff" />
+            <Text style={styles.primaryBtnTxt}> SCAN LABEL</Text>
+            </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orTxt}>or</Text>
+            <View style={styles.orLine} />
+            </View>
+
+            <TouchableOpacity
+            onPress={() => startScan('gallery')}
+            style={styles.outlineBtn}
+            activeOpacity={0.85}
+            >
+            <Ionicons name="image-outline" size={18} color={C.cyan} />
+            <Text style={styles.outlineBtnTxt}> Upload from Gallery</Text>
+            </TouchableOpacity>
+            </>
+            ) : (
+            <>
+            {/* COMPARE LABELS MODE */}
+            <View style={styles.compareInfo}>
+            <Ionicons name="information-circle-outline" size={16} color={C.cyan} />
+            <Text style={styles.compareInfoTxt}>
+            Upload <Text style={{ color: C.cyan }}>front label</Text> first, then{' '}
+            <Text style={{ color: C.success }}>back ingredients</Text>. AI detects greenwashing.
+            </Text>
+            </View>
+
+            <View style={styles.compareCard}>
+            <Text style={styles.compareCardTitle}>① Front Label (Claims)</Text>
+
+            {frontUri ? (
+            <>
+            <Image source={{ uri: frontUri }} style={styles.compareImg} />
+            <Text style={[styles.compareCardTitle, { color: C.success, marginTop: 8 }]}>
+            ✓ Captured — now upload back label
+            </Text>
+            </>
+            ) : (
+            <View style={styles.compareBtns}>
+            <TouchableOpacity style={styles.compareBtn} onPress={() => pickFront('camera')}>
+            <Ionicons name="camera-outline" size={18} color={C.cyan} />
+            <Text style={styles.compareBtnTxt}>Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.compareBtn} onPress={() => pickFront('gallery')}>
+            <Ionicons name="image-outline" size={18} color={C.cyan} />
+            <Text style={styles.compareBtnTxt}>Gallery</Text>
+            </TouchableOpacity>
+            </View>
+            )}
+            </View>
+
+            <View style={[styles.compareCard, !frontUri && { opacity: 0.35 }]}>
+            <Text style={styles.compareCardTitle}>② Back Label (Ingredients)</Text>
+
+            <View style={styles.compareBtns}>
+            <TouchableOpacity
+            style={styles.compareBtn}
+            onPress={() => frontUri && pickBack('camera')}
+            disabled={!frontUri}
+            >
+            <Ionicons name="camera-outline" size={18} color={C.cyan} />
+            <Text style={styles.compareBtnTxt}>Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+            style={styles.compareBtn}
+            onPress={() => frontUri && pickBack('gallery')}
+            disabled={!frontUri}
+            >
+            <Ionicons name="image-outline" size={18} color={C.cyan} />
+            <Text style={styles.compareBtnTxt}>Gallery</Text>
+            </TouchableOpacity>
+            </View>
+            </View>
+            </>
+            )}
 
             </ScrollView>
         </View>

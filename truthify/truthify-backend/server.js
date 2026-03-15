@@ -12,6 +12,7 @@ app.use(express.json());
 
 // 👉 ADD THIS LINE TO ENABLE YOUR NEW ROUTES:
 app.use('/api/auth', require('./routes/authroutes'));
+app.use('/api/scans', require('./routes/scanroutes'));
 
 app.get('/', (req, res) => {
   res.send('TRUTHIFY Backend is ALIVE!');

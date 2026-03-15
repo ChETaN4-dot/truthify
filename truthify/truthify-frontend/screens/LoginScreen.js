@@ -1,16 +1,15 @@
 // screens/LoginScreen.js
-// Truthify · Light Green Theme · Same Logic (Enhanced UI)
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView,
-  StatusBar, Alert, Animated, Dimensions, Image
+  StatusBar, Alert, Animated, Dimensions, Image, Easing
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { saveAuth, saveSession } from '../utils/storage';
 
+// Backend API functions
+import { loginUser, registerUser } from '../src/api/client'; 
 import logo from '../assets/newlogo.png';
 
 const { width } = Dimensions.get('window');
@@ -22,61 +21,104 @@ export default function LoginScreen({ onLogin }) {
   const [confirmPin, setConfirmPin] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(20)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current; // New Shake Animation
+  const scaleAnim = useRef(new Animated.Value(1)).current; // New Button Scale Animation
 
   useEffect(() => {
-    Animated.stagger(120, [
+    Animated.stagger(150, [
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }), // ✅ FIXED!
       ]),
       Animated.parallel([
-        Animated.timing(cardAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(cardSlide, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
+        Animated.timing(cardAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(cardSlide, { toValue: 0, friction: 7, tension: 50, useNativeDriver: true }),
       ]),
     ]).start();
   }, []);
 
+  const triggerShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true })
+    ]).start();
+  };
+
   const switchMode = () => {
-    Animated.timing(cardAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+    Animated.timing(cardAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
       setIsRegister(r => !r);
       setPin('');
       setConfirmPin('');
-      Animated.timing(cardAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      Animated.timing(cardAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     });
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || pin.length < 4) {
+    const trimmedName = name.trim();
+    
+    if (!trimmedName || pin.length < 4) {
+      triggerShake();
       Alert.alert('Invalid', 'Enter name and 4-digit PIN');
       return;
     }
+    
     setLoading(true);
+    
     try {
-      const { getAuth } = await import('../utils/storage');
+      const { saveAuth, saveSession } = await import('../utils/storage');
 
       if (isRegister) {
         if (pin !== confirmPin) {
+          triggerShake();
           Alert.alert('Mismatch', 'PINs do not match');
-          setLoading(false); return;
+          setLoading(false); 
+          return;
         }
-        await saveAuth({ name: name.trim(), pin });
-        await saveSession();
-        onLogin(name.trim());
+        
+        const result = await registerUser(trimmedName, pin);
+        
+        if (result.success) {
+          await saveAuth(result.user); 
+          await saveSession();
+          onLogin(result.user.name);
+        } else {
+          triggerShake();
+          Alert.alert('Registration Failed', result.message);
+        }
+        
       } else {
-        const user = await getAuth();
-        if (!user || user.pin !== pin) {
-          Alert.alert('Wrong credentials');
-          setLoading(false); return;
+        const result = await loginUser(trimmedName, pin);
+        
+        if (result.success) {
+          await saveAuth(result.user); 
+          await saveSession();
+          onLogin(result.user.name);
+        } else {
+          triggerShake();
+          Alert.alert('Login Failed', result.message);
         }
-        await saveSession();
-        onLogin(user.name);
       }
-    } catch (e) { Alert.alert('Error', e.message); }
+    } catch (e) { 
+      triggerShake();
+      Alert.alert('Error', e.message || 'Something went wrong'); 
+    }
+    
     setLoading(false);
+  };
+
+  const animateButton = (inOut) => {
+    Animated.spring(scaleAnim, {
+      toValue: inOut === 'in' ? 0.95 : 1,
+      useNativeDriver: true,
+      speed: 20
+    }).start();
   };
 
   const PinDots = ({ value }) => (
@@ -88,25 +130,21 @@ export default function LoginScreen({ onLogin }) {
   );
 
   return (
-    <LinearGradient
-      colors={['#e9fdf1', '#ffffff']}
-      style={{ flex: 1 }}
-    >
-      <KeyboardAvoidingView
-        style={s.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <LinearGradient colors={['#eafbf1', '#fdfdfd']} style={{ flex: 1 }}>
+      <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-          {/* LOGO */}
+          {/* LOGO HERO */}
           <Animated.View style={[s.logoWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Image source={logo} style={s.logoHero} resizeMode="contain" />
+            <View style={s.logoGlow}>
+              <Image source={logo} style={s.logoHero} resizeMode="contain" />
+            </View>
             <Text style={s.tagline}>Verify news. Trust facts.</Text>
           </Animated.View>
 
-          {/* TAB */}
+          {/* TAB ROW */}
           <View style={s.tabRow}>
             <TouchableOpacity style={[s.tabBtn, !isRegister && s.tabActive]} onPress={() => !isRegister || switchMode()}>
               <Text style={[s.tabText, !isRegister && s.tabTextActive]}>Sign In</Text>
@@ -116,20 +154,28 @@ export default function LoginScreen({ onLogin }) {
             </TouchableOpacity>
           </View>
 
-          {/* CARD */}
-          <Animated.View style={[s.card, { opacity: cardAnim, transform: [{ translateY: cardSlide }] }]}>
-            <Text style={s.cardTitle}>{isRegister ? 'Create Account' : 'Welcome Back! '}</Text>
+          {/* MAIN CARD WITH SHAKE ANIMATION */}
+          <Animated.View style={[s.card, { opacity: cardAnim, transform: [{ translateY: cardSlide }, { translateX: shakeAnim }] }]}>
+            <Text style={s.cardTitle}>{isRegister ? 'Create Account' : 'Welcome Back'}</Text>
 
             <View style={s.inputWrap}>
-              <Ionicons name="person-outline" size={16} color="#7fbf9a"/>
-              <TextInput style={s.input} placeholder="Name" value={name} onChangeText={setName}/>
+              <Ionicons name="person-outline" size={18} color="#5ba87b"/>
+              <TextInput 
+                style={s.input} 
+                placeholder="Name" 
+                placeholderTextColor="#a0c2af"
+                value={name} 
+                onChangeText={setName}
+                autoCorrect={false}
+              />
             </View>
 
             <View style={s.inputWrap}>
-              <Ionicons name="lock-closed-outline" size={16} color="#7fbf9a"/>
+              <Ionicons name="lock-closed-outline" size={18} color="#5ba87b"/>
               <TextInput
                 style={s.input}
                 placeholder="4-digit PIN"
+                placeholderTextColor="#a0c2af"
                 value={pin}
                 secureTextEntry
                 keyboardType="numeric"
@@ -140,10 +186,11 @@ export default function LoginScreen({ onLogin }) {
 
             {isRegister && (
               <View style={s.inputWrap}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#7fbf9a"/>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#5ba87b"/>
                 <TextInput
                   style={s.input}
                   placeholder="Confirm PIN"
+                  placeholderTextColor="#a0c2af"
                   value={confirmPin}
                   secureTextEntry
                   keyboardType="numeric"
@@ -153,18 +200,29 @@ export default function LoginScreen({ onLogin }) {
               </View>
             )}
 
-            <TouchableOpacity onPress={handleSubmit} disabled={loading}>
-              <LinearGradient colors={['#1E8A44','#2DB55D']} style={s.btn}>
-                <Text style={s.btnText}>
-                  {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
-                </Text>
-              </LinearGradient>
+            {/* ANIMATED SUBMIT BUTTON */}
+            <TouchableOpacity 
+              onPress={handleSubmit} 
+              disabled={loading}
+              activeOpacity={0.9}
+              onPressIn={() => animateButton('in')}
+              onPressOut={() => animateButton('out')}
+            >
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <LinearGradient colors={['#20964a','#2ab55c']} style={s.btn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <Text style={s.btnText}>
+                    {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
+                  </Text>
+                  {!loading && <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />}
+                </LinearGradient>
+              </Animated.View>
             </TouchableOpacity>
           </Animated.View>
 
-          <TouchableOpacity onPress={switchMode}>
+          {/* FOOTER LINK */}
+          <TouchableOpacity onPress={switchMode} style={s.footerTouch}>
             <Text style={s.switchText}>
-              {isRegister ? 'Already have account? ' : "Don't have account? "}
+              {isRegister ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={s.switchLink}>{isRegister ? 'Sign In' : 'Register'}</Text>
             </Text>
           </TouchableOpacity>
@@ -177,59 +235,80 @@ export default function LoginScreen({ onLogin }) {
 
 const s = StyleSheet.create({
   container:{ flex:1 },
-  scroll:{ flexGrow:1, justifyContent:'center', padding:26 },
-  logoHero: {width: 140,height: 140,marginBottom: 18},
-  logoWrap:{ alignItems:'center', marginBottom:28 },
-  logo:{ width:140, height:140, marginBottom:10 },
-  tagline:{ color:'#5f8f74', fontSize:13 },
+  scroll:{ flexGrow:1, justifyContent:'center', padding:24 },
+  
+  logoHero: { width: 110, height: 110 },
+  logoGlow: {
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 35,
+    shadowColor: '#20964a',
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+    elevation: 10,
+    marginBottom: 16
+  },
+  logoWrap:{ alignItems:'center', marginBottom:35, marginTop: 40 },
+  tagline:{ color:'#4d8565', fontSize:14, fontWeight: '600', letterSpacing: 0.5 },
 
   tabRow:{
     flexDirection:'row',
-    backgroundColor:'#e6f6ee',
-    borderRadius:16,
-    padding:4,
-    marginBottom:18
+    backgroundColor:'#dcf5e6',
+    borderRadius:14,
+    padding:5,
+    marginBottom:24
   },
-  tabBtn:{ flex:1, padding:12, alignItems:'center', borderRadius:12 },
-  tabActive:{ backgroundColor:'#fff', elevation:2 },
-  tabText:{ color:'#7fbf9a', fontWeight:'700' },
-  tabTextActive:{ color:'#145C2E' },
+  tabBtn:{ flex:1, padding:12, alignItems:'center', borderRadius:10 },
+  tabActive:{ backgroundColor:'#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+  tabText:{ color:'#78b594', fontWeight:'700', fontSize: 15 },
+  tabTextActive:{ color:'#1a6b34' },
 
   card:{
     backgroundColor:'#fff',
-    padding:24,
-    borderRadius:26,
-    marginBottom:18,
-    shadowColor:'#1E8A44',
-    shadowOpacity:0.12,
-    shadowRadius:20,
-    elevation:6
+    padding:26,
+    borderRadius:28,
+    marginBottom:20,
+    shadowColor:'#125c2b',
+    shadowOpacity:0.08,
+    shadowRadius:30,
+    elevation:8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)'
   },
-  cardTitle:{ fontSize:20, fontWeight:'800', marginBottom:18, color:'#0F1F14' },
+  cardTitle:{ fontSize:24, fontWeight:'800', marginBottom:24, color:'#0b2414', letterSpacing: -0.5 },
 
   inputWrap:{
     flexDirection:'row',
     alignItems:'center',
-    backgroundColor:'#f3fbf7',
-    borderRadius:16,
-    paddingHorizontal:14,
-    marginBottom:16
+    backgroundColor:'#f4fcf7',
+    borderWidth: 1,
+    borderColor: '#e2f5ea',
+    borderRadius:18,
+    paddingHorizontal:16,
+    marginBottom:16,
+    height: 60
   },
-  input:{ flex:1, padding:14, fontSize:15 },
+  input:{ flex:1, padding:14, fontSize:16, color: '#1a4026', fontWeight: '500' },
 
-  pinDots:{ flexDirection:'row', gap:6 },
-  pinDot:{ width:8,height:8,borderRadius:4,borderWidth:1,borderColor:'#bcdccc' },
-  pinDotFilled:{ backgroundColor:'#1E8A44' },
+  pinDots:{ flexDirection:'row', gap:8 },
+  pinDot:{ width:10, height:10, borderRadius:5, borderWidth:1.5, borderColor:'#c1e0cd', backgroundColor: '#fff' },
+  pinDotFilled:{ backgroundColor:'#20964a', borderColor: '#20964a' },
 
   btn:{
-    height:56,
+    height:60,
     borderRadius:18,
+    flexDirection: 'row',
     justifyContent:'center',
     alignItems:'center',
-    marginTop:6
+    marginTop: 10,
+    shadowColor:'#20964a',
+    shadowOpacity:0.3,
+    shadowRadius:15,
+    elevation:6
   },
-  btnText:{ color:'#fff', fontWeight:'800', fontSize:16 },
+  btnText:{ color:'#fff', fontWeight:'800', fontSize:17, letterSpacing: 0.5 },
 
-  switchText:{ textAlign:'center', color:'#6d9b82', fontSize:13 },
-  switchLink:{ color:'#1E8A44', fontWeight:'800' }
+  footerTouch: { padding: 10 },
+  switchText:{ textAlign:'center', color:'#5f8c72', fontSize:14 },
+  switchLink:{ color:'#20964a', fontWeight:'800' }
 });

@@ -1,12 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    Alert, TextInput, StatusBar
+    Alert, TextInput, StatusBar, ActivityIndicator
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../constants/colors';
-import { getScans, deleteScan } from '../utils/storage';
+
+// 👉 Backend Imports
+import { getAuth } from '../utils/storage';
+import { getUserHistory } from '../src/api/client'; 
 
 const FILTERS = ['All', 'This Week', 'High Risk', 'Safe'];
 
@@ -16,24 +19,34 @@ export default function HistoryScreen({ navigation }) {
     const [scans, setScans] = useState([]);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('All');
+    const [loading, setLoading] = useState(true);
 
-    useFocusEffect(useCallback(() => { getScans().then(setScans); }, []));
-
-    const handleDelete = (id) => Alert.alert('Delete', 'Remove this scan?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-            text: 'Delete', style: 'destructive', onPress: async () => {
-                await deleteScan(id);
-                setScans(prev => prev.filter(s => s.id !== id));
+    // 👉 Fetching from MongoDB Backend!
+    useFocusEffect(useCallback(() => { 
+        const fetchCloudHistory = async () => {
+            setLoading(true);
+            const user = await getAuth(); // 1. Find out who is logged in
+            
+            if (user && user._id) {
+                const result = await getUserHistory(user._id); // 2. Ask backend for their data
+                if (result.success) {
+                    setScans(result.history); // 3. Set the state with real cloud data
+                }
             }
-        }
+            setLoading(false);
+        };
+        fetchCloudHistory();
+    }, []));
+
+    const handleDelete = (id) => Alert.alert('Delete', 'Delete feature needs backend API next!', [
+        { text: 'OK', style: 'cancel' }
     ]);
 
     const now = Date.now();
     const filtered = scans.filter(s => {
         const matchSearch = (s.productName || '').toLowerCase().includes(search.toLowerCase());
         const matchFilter = filter === 'All' ? true
-            : filter === 'This Week' ? (now - new Date(s.timestamp).getTime()) < 7 * 86400000
+            : filter === 'This Week' ? (now - new Date(s.timestamp || s.createdAt).getTime()) < 7 * 86400000
                 : filter === 'High Risk' ? (s.overallScore || 0) < 40
                     : (s.overallScore || 0) >= 70;
         return matchSearch && matchFilter;
@@ -43,15 +56,15 @@ export default function HistoryScreen({ navigation }) {
         <TouchableOpacity
             style={styles.card}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('Results', { analysis: item, imageUri: item.imageUri })}
-            onLongPress={() => handleDelete(item.id)}
+            onPress={() => navigation.navigate('Result', { analysis: item, imageUri: item.imageUri })}
+            onLongPress={() => handleDelete(item._id)} // MongoDB uses _id
         >
             <View style={[styles.scoreBadge, { backgroundColor: getColor(item.overallScore) + '22' }]}>
                 <Text style={[styles.scoreVal, { color: getColor(item.overallScore) }]}>{item.overallScore}</Text>
             </View>
             <View style={styles.info}>
                 <Text style={styles.name}>{item.productName || 'Unknown Product'}</Text>
-                <Text style={styles.meta}>{new Date(item.timestamp).toLocaleDateString('en-IN')} · {item.productCategory || 'Product'}</Text>
+                <Text style={styles.meta}>{new Date(item.createdAt || item.timestamp).toLocaleDateString('en-IN')} · {item.productCategory || 'Product'}</Text>
                 <Text style={styles.flags}>{(item.redFlagIngredients || []).length} red flags found</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
@@ -83,16 +96,21 @@ export default function HistoryScreen({ navigation }) {
                 ))}
             </View>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+                <View style={styles.empty}>
+                     <ActivityIndicator size="large" color={C.cyan} />
+                     <Text style={styles.emptySub}>Fetching from cloud...</Text>
+                </View>
+            ) : filtered.length === 0 ? (
                 <View style={styles.empty}>
                     <Text style={{ fontSize: 52 }}>📋</Text>
                     <Text style={styles.emptyTitle}>No scans yet</Text>
-                    <Text style={styles.emptySub}>Scan a product to see it here</Text>
+                    <Text style={styles.emptySub}>Scan a product to save it to the cloud</Text>
                 </View>
             ) : (
                 <FlatList
                     data={filtered}
-                    keyExtractor={i => i.id}
+                    keyExtractor={i => i._id || i.id || Math.random().toString()}
                     renderItem={renderItem}
                     contentContainerStyle={{ paddingBottom: 20 }}
                     showsVerticalScrollIndicator={false}

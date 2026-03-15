@@ -57,3 +57,54 @@ export const getUserHistory = async (userId) => {
     return { success: false, history: [] };
   }
 };
+// 4. Save a New Scan to MongoDB
+export const saveUserScan = async (scanData) => {
+  try {
+    // Pointing to POST /api/scans/save
+    const url = BASE_URL.replace('/auth', '') + `/scans/save`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scanData), // We package the user ID and scan details here!
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Save Scan API Error:', error);
+    return { success: false, message: 'Network error while saving scan.' };
+  }
+};
+// ==========================================
+// 🌟 PROFILE & PREFERENCES API 🌟
+// ==========================================
+
+// 4. Get User Profile Data
+export const getUserProfile = async (userId) => {
+  try {
+    // We replace '/auth' with '/profile' to hit our new backend route
+    const url = BASE_URL.replace('/auth', '') + `/profile/${userId}`;
+    
+    const response = await fetch(url);
+    return await response.json();
+  } catch (error) {
+    console.error('Profile Fetch API Error:', error);
+    return { success: false, message: 'Network error while fetching profile.' };
+  }
+};
+
+// 5. Update User Profile (Name, Language, Preferences)
+export const updateUserPreferences = async (userId, profileData) => {
+  try {
+    const url = BASE_URL.replace('/auth', '') + `/profile/${userId}/preferences`;
+    
+    const response = await fetch(url, {
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileData), // 👈 Send the whole package!
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Update Preferences API Error:', error);
+    return { success: false, message: 'Network error while saving preferences.' };
+  }
+};

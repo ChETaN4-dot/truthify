@@ -1,9 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Rect, G } from 'react-native-svg';
 import { C } from '../constants/colors';
-import { getScans } from '../utils/storage';
+
+// 👉 Backend API Imports
+import { getAuth } from '../utils/storage';
+import { getUserHistory } from '../src/api/client'; 
 
 function getColor(s) { return s >= 70 ? C.success : s >= 40 ? C.warning : C.danger; }
 
@@ -16,18 +19,35 @@ const ACHIEVEMENTS = [
 
 export default function DashboardScreen() {
     const [scans, setScans] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    useFocusEffect(useCallback(() => { getScans().then(setScans); }, []));
+    // 🌟 MONGODB CLOUD FETCH 🌟
+    useFocusEffect(useCallback(() => { 
+        const fetchCloudData = async () => {
+            setLoading(true);
+            const user = await getAuth();
+            if (user && user._id) {
+                const result = await getUserHistory(user._id);
+                if (result.success) {
+                    setScans(result.history);
+                }
+            }
+            setLoading(false);
+        };
+        fetchCloudData();
+    }, []));
 
     const total = scans.length;
     const avgScore = total > 0 ? Math.round(scans.reduce((s, h) => s + (h.overallScore || 0), 0) / total) : 0;
-    const thisWeek = scans.filter(s => Date.now() - new Date(s.timestamp).getTime() < 7 * 86400000).length;
+    
+    // Updated to use MongoDB's 'createdAt'
+    const thisWeek = scans.filter(s => Date.now() - new Date(s.createdAt || s.timestamp).getTime() < 7 * 86400000).length;
 
     const allFlags = scans.flatMap(h => h.redFlagIngredients || []);
     const flagCounts = allFlags.reduce((acc, f) => { acc[f.name] = (acc[f.name] || 0) + 1; return acc; }, {});
     const topFlags = Object.entries(flagCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-    const last10 = scans.slice(0, 10).reverse();
+    const last10 = scans.slice(0, 10).reverse(); // Reverse so chart goes left-to-right (oldest to newest)
     const BAR_W = 26;
     const BAR_MAX_H = 80;
 
@@ -39,6 +59,15 @@ export default function DashboardScreen() {
         : avgScore >= 40 ? '⚠️ Some room for improvement'
             : total === 0 ? '👋 Start scanning to see insights'
                 : '🚨 High risk products detected — be careful!';
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={C.cyan} />
+                <Text style={{ color: C.textSub, marginTop: 12 }}>Syncing Dashboard...</Text>
+            </View>
+        );
+    }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>

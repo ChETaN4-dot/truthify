@@ -1,5 +1,5 @@
 // truthify-backend/controllers/authController.js
-const User = require('../models/user');
+const User = require('../models/User');
 
 // ==========================================
 // 1. REGISTER (Sign Up)
@@ -20,13 +20,20 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'User already exists. Please log in.' });
     }
 
-    // Create the new user
+    // Create the new user. The pre-save hook in User.js will automatically hash the PIN!
     const user = await User.create({
       name: name.trim(),
-      pin: pin
+      pin: pin.toString() // Convert to string to prevent bcrypt errors if a number is sent
     });
 
-    return res.status(201).json({ success: true, message: 'Account created successfully', user });
+    // Security: Don't send the hashed PIN back to the frontend!
+    const userResponse = {
+      _id: user._id,
+      name: user.name,
+      preferences: user.preferences
+    };
+
+    return res.status(201).json({ success: true, message: 'Account created successfully', user: userResponse });
 
   } catch (error) {
     console.error('Register Error:', error);
@@ -53,9 +60,18 @@ exports.login = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found. Please sign up first.' });
     }
 
-    // If user DOES exist, verify the PIN
-    if (user.pin === pin) {
-      return res.status(200).json({ success: true, message: 'Login successful', user });
+    // If user DOES exist, verify the PIN using our custom Bcrypt method
+    const isMatch = await user.matchPin(pin);
+    
+    if (isMatch) {
+      // Security: Don't send the hashed PIN back to the frontend!
+      const userResponse = {
+        _id: user._id,
+        name: user.name,
+        preferences: user.preferences
+      };
+
+      return res.status(200).json({ success: true, message: 'Login successful', user: userResponse });
     } else {
       return res.status(401).json({ success: false, message: 'Incorrect PIN. Try again.' });
     }

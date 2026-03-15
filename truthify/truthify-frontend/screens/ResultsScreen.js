@@ -8,7 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { C } from '../constants/colors';
 import ScoreGauge from '../components/ScoreGauge';
 import IngredientCard from '../components/IngredientCard';
-import { saveScan } from '../utils/storage';
+
+// 👉 Backend API Imports
+import { getAuth } from '../utils/storage';
+import { saveUserScan } from '../src/api/client'; 
 
 const LANGS = ['Hinglish', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati', 'Kannada', 'Malayalam'];
 
@@ -36,11 +39,40 @@ export default function ResultsScreen({ route, navigation }) {
     const [saved, setSaved] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
+    // 🌟 MONGODB SAVE TRIGGER 🌟
     useEffect(() => {
         Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-        if (!saved) {
-            saveScan({ ...analysis, imageUri }).then(() => setSaved(true));
-        }
+        
+        const saveToCloud = async () => {
+            if (!saved) {
+                try {
+                    const user = await getAuth(); // 1. Get logged-in user
+                    
+                    if (user && user._id) {
+                        // 2. Package the AI data with the User ID
+                        const payload = {
+                            userId: user._id,
+                            ...analysis,
+                            imageUri: imageUri || null
+                        };
+                        
+                        // 3. Send it to your Node.js backend!
+                        const result = await saveUserScan(payload);
+                        if (result.success) {
+                            console.log("✅ Successfully saved to MongoDB!");
+                        } else {
+                            console.log("❌ Failed to save to MongoDB:", result.message);
+                        }
+                    }
+                    setSaved(true); // Ensure we only save it once per scan
+                } catch (error) {
+                    console.error("Error saving to cloud:", error);
+                    setSaved(true);
+                }
+            }
+        };
+
+        saveToCloud();
     }, []);
 
     const safe = analysis.safeIngredients || [];

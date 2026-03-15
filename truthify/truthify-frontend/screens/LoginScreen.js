@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView,
-  StatusBar, Alert, Animated, Dimensions, Image, Easing
+  StatusBar, Animated, Dimensions, Image, Easing
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,20 +20,24 @@ export default function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // 🌟 NEW ERROR TOAST STATE 🌟
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(20)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current; // New Shake Animation
-  const scaleAnim = useRef(new Animated.Value(1)).current; // New Button Scale Animation
+  const shakeAnim = useRef(new Animated.Value(0)).current; 
+  const scaleAnim = useRef(new Animated.Value(1)).current; 
+  const errorToastAnim = useRef(new Animated.Value(-150)).current; // 🌟 NEW TOAST ANIMATION 🌟
 
   useEffect(() => {
     Animated.stagger(150, [
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }), // ✅ FIXED!
+        Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
       ]),
       Animated.parallel([
         Animated.timing(cardAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -51,6 +55,29 @@ export default function LoginScreen({ onLogin }) {
     ]).start();
   };
 
+  // 🌟 CUSTOM ERROR TOAST FUNCTION 🌟
+  const showErrorToast = (msg) => {
+    setErrorMsg(msg);
+    triggerShake(); // Keep that awesome shake effect!
+    
+    // Slide down
+    Animated.spring(errorToastAnim, {
+      toValue: 60, // Distance from top
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40
+    }).start();
+
+    // Slide back up after 3 seconds
+    setTimeout(() => {
+      Animated.timing(errorToastAnim, {
+        toValue: -150,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, 3000);
+  };
+
   const switchMode = () => {
     Animated.timing(cardAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
       setIsRegister(r => !r);
@@ -64,8 +91,7 @@ export default function LoginScreen({ onLogin }) {
     const trimmedName = name.trim();
     
     if (!trimmedName || pin.length < 4) {
-      triggerShake();
-      Alert.alert('Invalid', 'Enter name and 4-digit PIN');
+      showErrorToast('Please enter your name and a 4-digit PIN.');
       return;
     }
     
@@ -76,8 +102,7 @@ export default function LoginScreen({ onLogin }) {
 
       if (isRegister) {
         if (pin !== confirmPin) {
-          triggerShake();
-          Alert.alert('Mismatch', 'PINs do not match');
+          showErrorToast('Your PINs do not match. Please try again.');
           setLoading(false); 
           return;
         }
@@ -89,8 +114,7 @@ export default function LoginScreen({ onLogin }) {
           await saveSession();
           onLogin(result.user.name);
         } else {
-          triggerShake();
-          Alert.alert('Registration Failed', result.message);
+          showErrorToast(result.message); // Show backend error beautifully
         }
         
       } else {
@@ -101,13 +125,11 @@ export default function LoginScreen({ onLogin }) {
           await saveSession();
           onLogin(result.user.name);
         } else {
-          triggerShake();
-          Alert.alert('Login Failed', result.message);
+          showErrorToast(result.message); // Show backend error beautifully
         }
       }
     } catch (e) { 
-      triggerShake();
-      Alert.alert('Error', e.message || 'Something went wrong'); 
+      showErrorToast(e.message || 'Something went wrong on the network.'); 
     }
     
     setLoading(false);
@@ -131,9 +153,20 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <LinearGradient colors={['#eafbf1', '#fdfdfd']} style={{ flex: 1 }}>
-      <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      
+      {/* 🌟 CUSTOM ANIMATED ERROR TOAST 🌟 */}
+      <Animated.View style={[s.errorToastContainer, { transform: [{ translateY: errorToastAnim }] }]}>
+        <LinearGradient colors={['#EF4444', '#DC2626']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.errorToastGradient}>
+          <Ionicons name="warning" size={28} color="#fff" />
+          <View style={s.errorToastTextWrap}>
+            <Text style={s.errorToastTitle}>Authentication Error</Text>
+            <Text style={s.errorToastSub}>{errorMsg}</Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
+      <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
           {/* LOGO HERO */}
@@ -237,75 +270,35 @@ const s = StyleSheet.create({
   container:{ flex:1 },
   scroll:{ flexGrow:1, justifyContent:'center', padding:24 },
   
+  // 🌟 NEW TOAST STYLES 🌟
+  errorToastContainer: { position: 'absolute', top: 0, left: 20, right: 20, zIndex: 999 },
+  errorToastGradient: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 10 },
+  errorToastTextWrap: { marginLeft: 14, flex: 1 },
+  errorToastTitle: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  errorToastSub: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 13, marginTop: 2 },
+
   logoHero: { width: 110, height: 110 },
-  logoGlow: {
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 35,
-    shadowColor: '#20964a',
-    shadowOpacity: 0.15,
-    shadowRadius: 25,
-    elevation: 10,
-    marginBottom: 16
-  },
+  logoGlow: { backgroundColor: '#ffffff', padding: 15, borderRadius: 35, shadowColor: '#20964a', shadowOpacity: 0.15, shadowRadius: 25, elevation: 10, marginBottom: 16 },
   logoWrap:{ alignItems:'center', marginBottom:35, marginTop: 40 },
   tagline:{ color:'#4d8565', fontSize:14, fontWeight: '600', letterSpacing: 0.5 },
 
-  tabRow:{
-    flexDirection:'row',
-    backgroundColor:'#dcf5e6',
-    borderRadius:14,
-    padding:5,
-    marginBottom:24
-  },
+  tabRow:{ flexDirection:'row', backgroundColor:'#dcf5e6', borderRadius:14, padding:5, marginBottom:24 },
   tabBtn:{ flex:1, padding:12, alignItems:'center', borderRadius:10 },
   tabActive:{ backgroundColor:'#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
   tabText:{ color:'#78b594', fontWeight:'700', fontSize: 15 },
   tabTextActive:{ color:'#1a6b34' },
 
-  card:{
-    backgroundColor:'#fff',
-    padding:26,
-    borderRadius:28,
-    marginBottom:20,
-    shadowColor:'#125c2b',
-    shadowOpacity:0.08,
-    shadowRadius:30,
-    elevation:8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)'
-  },
+  card:{ backgroundColor:'#fff', padding:26, borderRadius:28, marginBottom:20, shadowColor:'#125c2b', shadowOpacity:0.08, shadowRadius:30, elevation:8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
   cardTitle:{ fontSize:24, fontWeight:'800', marginBottom:24, color:'#0b2414', letterSpacing: -0.5 },
 
-  inputWrap:{
-    flexDirection:'row',
-    alignItems:'center',
-    backgroundColor:'#f4fcf7',
-    borderWidth: 1,
-    borderColor: '#e2f5ea',
-    borderRadius:18,
-    paddingHorizontal:16,
-    marginBottom:16,
-    height: 60
-  },
+  inputWrap:{ flexDirection:'row', alignItems:'center', backgroundColor:'#f4fcf7', borderWidth: 1, borderColor: '#e2f5ea', borderRadius:18, paddingHorizontal:16, marginBottom:16, height: 60 },
   input:{ flex:1, padding:14, fontSize:16, color: '#1a4026', fontWeight: '500' },
 
   pinDots:{ flexDirection:'row', gap:8 },
   pinDot:{ width:10, height:10, borderRadius:5, borderWidth:1.5, borderColor:'#c1e0cd', backgroundColor: '#fff' },
   pinDotFilled:{ backgroundColor:'#20964a', borderColor: '#20964a' },
 
-  btn:{
-    height:60,
-    borderRadius:18,
-    flexDirection: 'row',
-    justifyContent:'center',
-    alignItems:'center',
-    marginTop: 10,
-    shadowColor:'#20964a',
-    shadowOpacity:0.3,
-    shadowRadius:15,
-    elevation:6
-  },
+  btn:{ height:60, borderRadius:18, flexDirection: 'row', justifyContent:'center', alignItems:'center', marginTop: 10, shadowColor:'#20964a', shadowOpacity:0.3, shadowRadius:15, elevation:6 },
   btnText:{ color:'#fff', fontWeight:'800', fontSize:17, letterSpacing: 0.5 },
 
   footerTouch: { padding: 10 },

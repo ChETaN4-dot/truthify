@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { sendChatMessage } from '../services/groqApi';
 import ChatBubble from '../components/ChatBubble';
 
@@ -19,6 +19,9 @@ const QUICK_QUESTIONS = [
 const LANGUAGES = ['English', 'Hinglish', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati', 'Kannada', 'Malayalam'];
 
 export default function ChatScreen({ route, navigation }) {
+    const { C, isDark, toggleTheme } = useTheme();
+    const styles = getStyles(C);
+
     const { analysis } = route.params;
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -151,7 +154,7 @@ export default function ChatScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.border },
     backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center' },
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
     langOptionTxt: { color: C.textSub, fontSize: 13, fontWeight: '600' },
     messageList: { padding: 16, paddingBottom: 8 },
     typingWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 },
-    typingBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.border },
+    typingBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.border },
     typingText: { color: C.textSub, fontSize: 13 },
     quickScroll: { paddingVertical: 10 },
     quickChip: { backgroundColor: C.surface, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: C.border },

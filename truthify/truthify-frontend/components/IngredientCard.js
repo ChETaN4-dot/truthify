@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { C } from '../constants/colors';
-
-const SEV_COLOR = { HIGH: C.danger, MEDIUM: C.warning, LOW: C.textSub };
+import { useTheme } from '../theme/ThemeContext';
 
 export default function IngredientCard({ item, type = 'red' }) {
+    const { C } = useTheme();
+    const styles = getStyles(C);
+
+    // SEV_COLOR moved inside the component so it has access to the theme object C
+    const SEV_COLOR = { HIGH: C.danger, MEDIUM: C.warning, LOW: C.textSub };
+
     const [expanded, setExpanded] = useState(false);
 
     if (type === 'safe') {
@@ -37,9 +41,9 @@ export default function IngredientCard({ item, type = 'red' }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     card: {
-        backgroundColor: C.card, borderRadius: 14, padding: 14,
+        backgroundColor: C.surface, borderRadius: 14, padding: 14,
         marginBottom: 10, borderLeftWidth: 3,
         borderWidth: 1, borderColor: C.border,
     },

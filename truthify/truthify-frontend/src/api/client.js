@@ -7,7 +7,7 @@ const hostUri = Constants.expoConfig?.hostUri;
 
 // Extracts just the IP part (e.g., "192.168.1.104"). 
 // If it fails for any reason, it falls back to your last known IP just to be safe.
-const MY_IP = hostUri ? hostUri.split(':')[0] : '192.168.1.104'; 
+const MY_IP = hostUri ? hostUri.split(':')[0] : '192.168.1.105';
 
 const BASE_URL = `http://${MY_IP}:5000/api/auth`;
 
@@ -49,7 +49,7 @@ export const getUserHistory = async (userId) => {
   try {
     // We replace '/auth' with '/scans' so it points to the right backend folder
     const url = BASE_URL.replace('/auth', '') + `/scans/history/${userId}`;
-    
+
     const response = await fetch(url);
     return await response.json();
   } catch (error) {
@@ -62,7 +62,7 @@ export const saveUserScan = async (scanData) => {
   try {
     // Pointing to POST /api/scans/save
     const url = BASE_URL.replace('/auth', '') + `/scans/save`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -83,7 +83,7 @@ export const getUserProfile = async (userId) => {
   try {
     // We replace '/auth' with '/profile' to hit our new backend route
     const url = BASE_URL.replace('/auth', '') + `/profile/${userId}`;
-    
+
     const response = await fetch(url);
     return await response.json();
   } catch (error) {
@@ -96,9 +96,9 @@ export const getUserProfile = async (userId) => {
 export const updateUserPreferences = async (userId, profileData) => {
   try {
     const url = BASE_URL.replace('/auth', '') + `/profile/${userId}/preferences`;
-    
+
     const response = await fetch(url, {
-      method: 'PUT', 
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData), // 👈 Send the whole package!
     });

@@ -16,6 +16,7 @@ import AppNavigator from './navigation/AppNavigator';
 import OnboardingScreen from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
 import { isOnboarded, getAuth, getSession, clearSession } from './utils/storage';
+import { ThemeProvider } from './theme/ThemeContext';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const { width } = Dimensions.get('window');
@@ -291,6 +292,7 @@ export default function App() {
 
   // ── Render: post-splash screens ───────────────────────────────────────────
   return (
+    <ThemeProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" backgroundColor="#F5F3EC" />
       {screen === 'onboarding' ? (
@@ -314,6 +316,7 @@ export default function App() {
         </NavigationContainer>
       )}
     </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
 

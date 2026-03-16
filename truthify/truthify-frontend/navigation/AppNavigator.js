@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 import ScanScreen from '../screens/ScanScreen';
 import ProcessingScreen from '../screens/ProcessingScreen';
@@ -13,6 +13,7 @@ import ChatScreen from '../screens/ChatScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import GlobalFab from '../components/GlobalFab';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -37,37 +38,43 @@ function ScanStack({ route }) {
 }
 
 export default function AppNavigator({ userName, onLogout }) {
+    const { C, isDark, toggleTheme } = useTheme();
+    const styles = getStyles(C);
+
     return (
-        <Tab.Navigator
-            screenOptions={({ route }) => ({
-                headerShown: false,
-                tabBarStyle: styles.tabBar,
-                tabBarActiveTintColor: C.cyan,
-                tabBarInactiveTintColor: C.textMuted,
-                tabBarLabelStyle: styles.tabLabel,
-                tabBarIcon: ({ focused, color, size }) => (
-                    <View style={focused ? styles.activeIconWrap : null}>
-                        {focused && (
-                            <LinearGradient colors={[C.cyan + '33', C.purple + '22']} style={StyleSheet.absoluteFill} />
-                        )}
-                        <Ionicons name={TAB_ICONS[route.name]} size={22} color={color} />
-                    </View>
-                ),
-            })}
-        >
-            <Tab.Screen name="Scan" initialParams={{ userName }}>
-                {(props) => <ScanStack {...props} route={{ ...props.route, params: { userName } }} />}
-            </Tab.Screen>
-            <Tab.Screen name="History" component={HistoryScreen} />
-            <Tab.Screen name="Dashboard" component={DashboardScreen} />
-            <Tab.Screen name="Profile">
-                {(props) => <ProfileScreen {...props} userName={userName} onLogout={onLogout} />}
-            </Tab.Screen>
-        </Tab.Navigator>
+        <View style={{ flex: 1 }}>
+            <Tab.Navigator
+                screenOptions={({ route }) => ({
+                    headerShown: false,
+                    tabBarStyle: styles.tabBar,
+                    tabBarActiveTintColor: C.cyan,
+                    tabBarInactiveTintColor: C.textMuted,
+                    tabBarLabelStyle: styles.tabLabel,
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <View style={focused ? styles.activeIconWrap : null}>
+                            {focused && (
+                                <LinearGradient colors={[C.cyan + '33', (C.surface || '#CCC') + '22']} style={StyleSheet.absoluteFill} />
+                            )}
+                            <Ionicons name={TAB_ICONS[route.name]} size={22} color={color} />
+                        </View>
+                    ),
+                })}
+            >
+                <Tab.Screen name="Scan" initialParams={{ userName }}>
+                    {(props) => <ScanStack {...props} route={{ ...props.route, params: { userName } }} />}
+                </Tab.Screen>
+                <Tab.Screen name="History" component={HistoryScreen} />
+                <Tab.Screen name="Dashboard" component={DashboardScreen} />
+                <Tab.Screen name="Profile">
+                    {(props) => <ProfileScreen {...props} userName={userName} onLogout={onLogout} />}
+                </Tab.Screen>
+            </Tab.Navigator>
+            <GlobalFab />
+        </View>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     tabBar: {
         backgroundColor: C.surface,
         borderTopColor: C.border,

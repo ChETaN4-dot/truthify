@@ -5,73 +5,54 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 import ScoreGauge from '../components/ScoreGauge';
 import IngredientCard from '../components/IngredientCard';
+import IngredientsPieChart from '../components/IngredientsPieChart';
 
-// 👉 Backend API Imports
+// Backend API Imports
 import { getAuth } from '../utils/storage';
-import { saveUserScan } from '../src/api/client'; 
+import { saveUserScan } from '../src/api/client';
 
 const LANGS = ['Hinglish', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati', 'Kannada', 'Malayalam'];
 
-function Section({ title, children, style }) {
-    return (
-        <View style={[styles.section, style]}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-}
-
-function Pill({ label, color }) {
-    return (
-        <View style={[styles.pill, { backgroundColor: color + '22', borderColor: color }]}>
-            <Text style={[styles.pillText, { color }]}>{label}</Text>
-        </View>
-    );
-}
-
 export default function ResultsScreen({ route, navigation }) {
+    const { C } = useTheme();
+    const styles = getStyles(C);
+
     const { analysis, imageUri, compareMode } = route.params;
     const [selectedLang, setSelectedLang] = useState('Hinglish');
     const [showAllSafe, setShowAllSafe] = useState(false);
     const [saved, setSaved] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    // 🌟 MONGODB SAVE TRIGGER 🌟
     useEffect(() => {
         Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-        
+
         const saveToCloud = async () => {
             if (!saved) {
                 try {
-                    const user = await getAuth(); // 1. Get logged-in user
-                    
+                    const user = await getAuth();
                     if (user && user._id) {
-                        // 2. Package the AI data with the User ID
                         const payload = {
                             userId: user._id,
                             ...analysis,
                             imageUri: imageUri || null
                         };
-                        
-                        // 3. Send it to your Node.js backend!
                         const result = await saveUserScan(payload);
                         if (result.success) {
-                            console.log("✅ Successfully saved to MongoDB!");
+                            console.log('✅ Successfully saved to MongoDB!');
                         } else {
-                            console.log("❌ Failed to save to MongoDB:", result.message);
+                            console.log('❌ Failed to save to MongoDB:', result.message);
                         }
                     }
-                    setSaved(true); // Ensure we only save it once per scan
+                    setSaved(true);
                 } catch (error) {
-                    console.error("Error saving to cloud:", error);
+                    console.error('Error saving to cloud:', error);
                     setSaved(true);
                 }
             }
         };
-
         saveToCloud();
     }, []);
 
@@ -83,6 +64,24 @@ export default function ResultsScreen({ route, navigation }) {
         diabetic: '🩺 Diabetic', vegan: '🌱 Vegan', glutenFree: '🌾 Gluten Free',
         lactoseFree: '🥛 Lactose Free', nutFree: '🥜 Nut Free',
     };
+
+    // Section and Pill defined inside so they can close over styles
+    function Section({ title, children, style: s }) {
+        return (
+            <View style={[styles.section, s]}>
+                <Text style={styles.sectionTitle}>{title}</Text>
+                {children}
+            </View>
+        );
+    }
+
+    function Pill({ label, color }) {
+        return (
+            <View style={[styles.pill, { backgroundColor: color + '22', borderColor: color }]}>
+                <Text style={[styles.pillText, { color }]}>{label}</Text>
+            </View>
+        );
+    }
 
     return (
         <Animated.ScrollView style={[styles.container, { opacity: fadeAnim }]} contentContainerStyle={styles.scroll}>
@@ -112,6 +111,15 @@ export default function ResultsScreen({ route, navigation }) {
                     <Pill label={`${(analysis.warningIngredients || []).length} Warnings`} color={C.warning} />
                 </View>
             </View>
+
+            {/* Ingredients Pie Chart */}
+            <Section title="📊 Ingredient Breakdown">
+                <IngredientsPieChart
+                    safe={(analysis.safeIngredients || []).length}
+                    warning={(analysis.warningIngredients || []).length}
+                    danger={(analysis.redFlagIngredients || []).length}
+                />
+            </Section>
 
             {/* Greenwashing */}
             {(analysis.greenwashingAlerts || []).length > 0 && (
@@ -261,7 +269,7 @@ export default function ResultsScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg },
     scroll: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },

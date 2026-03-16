@@ -1,29 +1,35 @@
-const Scan = require('../models/scan');
-
-// 1. Save a new scan from the app
+// truthify-backend/controllers/scancontroller.js - MOCKED FOR DEMO
 exports.saveScan = async (req, res) => {
     try {
-        const { userId, ...scanData } = req.body;
-        
-        const newScan = await Scan.create({ userId, ...scanData });
-        res.status(201).json({ success: true, scan: newScan });
+        console.log('--- Mock Saving Scan ---');
+        res.status(201).json({ success: true, message: 'Scan saved (Mock)' });
     } catch (error) {
-        console.error('Error saving scan:', error);
-        res.status(500).json({ success: false, message: 'Failed to save scan to database' });
+        res.status(500).json({ success: false, message: 'Failed to save scan' });
     }
 };
 
-// 2. Send the history back to the HistoryScreen
 exports.getUserHistory = async (req, res) => {
     try {
-        const { userId } = req.params;
-        
-        // Find all scans for this user, sorted by newest first
-        const history = await Scan.find({ userId }).sort({ createdAt: -1 });
-        
+        const history = [
+            {
+                _id: "scan_1",
+                productName: "Coca Cola",
+                overallScore: 22,
+                createdAt: new Date().toISOString(),
+                productCategory: "Drink",
+                redFlagIngredients: [{ name: "High Fructose Corn Syrup" }]
+            },
+            {
+                _id: "scan_2",
+                productName: "Oats",
+                overallScore: 88,
+                createdAt: new Date(Date.now() - 3600000).toISOString(),
+                productCategory: "Food",
+                redFlagIngredients: []
+            }
+        ];
         res.status(200).json({ success: true, history });
     } catch (error) {
-        console.error('Error fetching history:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch history' });
     }
 };

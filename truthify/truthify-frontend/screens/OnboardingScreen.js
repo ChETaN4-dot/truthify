@@ -5,30 +5,34 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { setOnboarded } from '../utils/storage';
 
 const { width } = Dimensions.get('window');
 
+// Static slide data — colors are resolved at render time using the theme
 const SLIDES = [
     {
         id: '1', icon: 'scan-outline', title: 'Scan Any Label',
         sub: 'Point your camera at any product label. Our OCR reads every ingredient instantly.',
-        color: C.cyan,
+        colorKey: 'cyan',
     },
     {
         id: '2', icon: 'flask-outline', title: 'AI Decodes the Truth',
         sub: 'Our AI analyzes every ingredient for health risks, greenwashing, and hidden dangers.',
-        color: C.purple,
+        colorKey: 'primary',
     },
     {
         id: '3', icon: 'shield-checkmark-outline', title: 'Protect Your Health',
         sub: 'Get personalized safety scores based on your health profile. Know before you buy.',
-        color: C.success,
+        colorKey: 'success',
     },
 ];
 
 export default function OnboardingScreen({ onDone }) {
+    const { C } = useTheme();
+    const styles = getStyles(C);
+
     const [index, setIndex] = useState(0);
     const listRef = useRef(null);
 
@@ -46,15 +50,18 @@ export default function OnboardingScreen({ onDone }) {
         onDone();
     };
 
-    const renderSlide = ({ item }) => (
-        <View style={styles.slide}>
-            <View style={[styles.iconCircle, { borderColor: item.color + '44', backgroundColor: item.color + '11' }]}>
-                <Ionicons name={item.icon} size={72} color={item.color} />
+    const renderSlide = ({ item }) => {
+        const color = C[item.colorKey] || C.cyan;
+        return (
+            <View style={styles.slide}>
+                <View style={[styles.iconCircle, { borderColor: color + '44', backgroundColor: color + '11' }]}>
+                    <Ionicons name={item.icon} size={72} color={color} />
+                </View>
+                <Text style={styles.slideTitle}>{item.title}</Text>
+                <Text style={styles.slideSub}>{item.sub}</Text>
             </View>
-            <Text style={styles.slideTitle}>{item.title}</Text>
-            <Text style={styles.slideSub}>{item.sub}</Text>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -98,7 +105,7 @@ export default function OnboardingScreen({ onDone }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg, paddingTop: 60, paddingBottom: 40 },
     skip: { position: 'absolute', top: 60, right: 24, zIndex: 10 },
     skipText: { color: C.textSub, fontSize: 14 },

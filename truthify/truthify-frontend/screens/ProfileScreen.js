@@ -6,7 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 // 👉 Backend API Imports
 import { getAuth } from '../utils/storage';
@@ -26,6 +26,9 @@ const TOGGLES = [
 const LANGUAGES = ['English', 'Hinglish', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati', 'Kannada', 'Malayalam'];
 
 export default function ProfileScreen({ userName, onLogout }) {
+    const { C, isDark, toggleTheme } = useTheme();
+    const styles = getStyles(C);
+
     const [profile, setProfile] = useState({ preferences: {}, language: 'English' });
     const [name, setName] = useState(userName || '');
     const [loading, setLoading] = useState(true);
@@ -251,7 +254,7 @@ export default function ProfileScreen({ userName, onLogout }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg },
     scroll: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     

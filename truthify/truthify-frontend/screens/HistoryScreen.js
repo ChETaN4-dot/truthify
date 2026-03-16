@@ -5,32 +5,34 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 
-// 👉 Backend Imports
+// Backend Imports
 import { getAuth } from '../utils/storage';
-import { getUserHistory } from '../src/api/client'; 
+import { getUserHistory } from '../src/api/client';
 
 const FILTERS = ['All', 'This Week', 'High Risk', 'Safe'];
 
-function getColor(s) { return s >= 70 ? C.success : s >= 40 ? C.warning : C.danger; }
-
 export default function HistoryScreen({ navigation }) {
+    const { C } = useTheme();
+    const styles = getStyles(C);
+
+    // getColor now lives inside component where C is in scope
+    const getColor = (s) => s >= 70 ? C.success : s >= 40 ? C.warning : C.danger;
+
     const [scans, setScans] = useState([]);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('All');
     const [loading, setLoading] = useState(true);
 
-    // 👉 Fetching from MongoDB Backend!
-    useFocusEffect(useCallback(() => { 
+    useFocusEffect(useCallback(() => {
         const fetchCloudHistory = async () => {
             setLoading(true);
-            const user = await getAuth(); // 1. Find out who is logged in
-            
+            const user = await getAuth();
             if (user && user._id) {
-                const result = await getUserHistory(user._id); // 2. Ask backend for their data
+                const result = await getUserHistory(user._id);
                 if (result.success) {
-                    setScans(result.history); // 3. Set the state with real cloud data
+                    setScans(result.history);
                 }
             }
             setLoading(false);
@@ -38,7 +40,7 @@ export default function HistoryScreen({ navigation }) {
         fetchCloudHistory();
     }, []));
 
-    const handleDelete = (id) => Alert.alert('Delete', 'Delete feature needs backend API next!', [
+    const handleDelete = (id) => Alert.alert('Delete', 'Delete feature needs backend API!', [
         { text: 'OK', style: 'cancel' }
     ]);
 
@@ -56,8 +58,8 @@ export default function HistoryScreen({ navigation }) {
         <TouchableOpacity
             style={styles.card}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('Result', { analysis: item, imageUri: item.imageUri })}
-            onLongPress={() => handleDelete(item._id)} // MongoDB uses _id
+            onPress={() => navigation.navigate('Results', { analysis: item, imageUri: item.imageUri })}
+            onLongPress={() => handleDelete(item._id)}
         >
             <View style={[styles.scoreBadge, { backgroundColor: getColor(item.overallScore) + '22' }]}>
                 <Text style={[styles.scoreVal, { color: getColor(item.overallScore) }]}>{item.overallScore}</Text>
@@ -98,8 +100,8 @@ export default function HistoryScreen({ navigation }) {
 
             {loading ? (
                 <View style={styles.empty}>
-                     <ActivityIndicator size="large" color={C.cyan} />
-                     <Text style={styles.emptySub}>Fetching from cloud...</Text>
+                    <ActivityIndicator size="large" color={C.cyan} />
+                    <Text style={styles.emptySub}>Fetching from cloud...</Text>
                 </View>
             ) : filtered.length === 0 ? (
                 <View style={styles.empty}>
@@ -120,7 +122,7 @@ export default function HistoryScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg, padding: 20, paddingTop: 60 },
     headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     title: { fontSize: 28, fontWeight: '900', color: C.text },

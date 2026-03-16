@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const SIZE = 180;
@@ -9,7 +9,7 @@ const STROKE = 12;
 const R = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-function getColor(score) {
+function getColor(score, C) {
     if (score >= 90) return C.gold;
     if (score >= 70) return C.success;
     if (score >= 40) return C.warning;
@@ -24,6 +24,9 @@ function getLabel(score) {
 }
 
 export default function ScoreGauge({ score = 0 }) {
+    const { C, isDark, toggleTheme } = useTheme();
+    const styles = getStyles(C);
+
     const anim = useRef(new Animated.Value(0)).current;
     const displayScore = useRef(new Animated.Value(0)).current;
 
@@ -37,7 +40,7 @@ export default function ScoreGauge({ score = 0 }) {
         outputRange: [CIRCUMFERENCE, 0],
     });
 
-    const color = getColor(score);
+    const color = getColor(score, C);
     const label = getLabel(score);
 
     return (
@@ -66,7 +69,7 @@ export default function ScoreGauge({ score = 0 }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { alignItems: 'center', justifyContent: 'center' },
     center: { position: 'absolute', alignItems: 'center' },
     score: { fontSize: 52, fontWeight: '900' },

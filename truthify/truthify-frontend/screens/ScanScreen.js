@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
     Alert, Image, StatusBar, ActivityIndicator
@@ -7,13 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { prepareImageForOCR } from '../utils/imageProcessor';
 import { useFocusEffect } from '@react-navigation/native';
 
-// 👉 Backend API Imports
+// Backend API Imports
 import { getAuth } from '../utils/storage';
-import { getUserHistory } from '../src/api/client'; 
+import { getUserHistory } from '../src/api/client';
 
 function getGreeting() {
     const h = new Date().getHours();
@@ -22,22 +22,23 @@ function getGreeting() {
     return 'Good Evening';
 }
 
-// 👉 SAFETY NET: Fallback gradient if C.gradCyan is missing
-const SAFE_GRADIENT = C.gradCyan && Array.isArray(C.gradCyan) && C.gradCyan.length >= 2 
-    ? C.gradCyan 
-    : ['#20964a', '#2ab55c'];
-
 export default function ScanScreen({ navigation, route }) {
+    const { C, isDark, toggleTheme } = useTheme();
+    const styles = getStyles(C);
+
+    // Safe gradient — falls back if theme value is missing
+    const SAFE_GRADIENT = Array.isArray(C.gradCyan) ? C.gradCyan : ['#20964a', '#2ab55c'];
+
     const userName = route?.params?.userName || 'User';
     const [mode, setMode] = useState('single');
     const [frontUri, setFrontUri] = useState(null);
     const [frontBase64, setFrontBase64] = useState(null);
-    
-    // 👉 Cloud Data States
+
+    // Cloud Data States
     const [recentScans, setRecentScans] = useState([]);
     const [loadingStats, setLoadingStats] = useState(true);
 
-    // 👉 Fetch stats from MongoDB Cloud
+    // Fetch stats from MongoDB Cloud
     useFocusEffect(useCallback(() => {
         const fetchStats = async () => {
             setLoadingStats(true);
@@ -97,7 +98,6 @@ export default function ScanScreen({ navigation, route }) {
             {/* TOP BRAND BAR */}
             <View style={styles.appBar}>
                 <Text style={styles.appTitle}>Truthify</Text>
-
                 <TouchableOpacity
                     onPress={() => navigation.navigate('Profile')}
                     style={styles.topAvatarBtn}
@@ -107,7 +107,7 @@ export default function ScanScreen({ navigation, route }) {
                             {userName[0]?.toUpperCase() || 'U'}
                         </Text>
                     </LinearGradient>
-                 </TouchableOpacity>
+                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -117,13 +117,11 @@ export default function ScanScreen({ navigation, route }) {
                 <Text style={styles.heroGreeting}>
                     {getGreeting()},
                 </Text>
-
                 <Text style={styles.heroName}>
                     {userName.charAt(0).toUpperCase() + userName.slice(1)}
                 </Text>
-
                 <Text style={styles.heroSub}>
-                    Let’s uncover what’s really inside your food.
+                    Let's uncover what's really inside your food.
                 </Text>
             </View>
 
@@ -146,7 +144,7 @@ export default function ScanScreen({ navigation, route }) {
                 </TouchableOpacity>
             </View>
 
-            {/* 🌟 STATS & CLOUD EMPTY STATE 🌟 */}
+            {/* STATS & CLOUD EMPTY STATE */}
             {loadingStats ? (
                 <View style={styles.emptyCard}>
                     <ActivityIndicator size="small" color={C.cyan || '#20964a'} />
@@ -168,7 +166,6 @@ export default function ScanScreen({ navigation, route }) {
                         <Text style={styles.statVal}>{recentScans.length}</Text>
                         <Text style={styles.statLbl}>Scanned</Text>
                     </View>
-
                     <View style={[styles.statPill, { marginLeft: 10 }]}>
                         <Text style={styles.statVal}>
                             {Math.round(
@@ -189,9 +186,7 @@ export default function ScanScreen({ navigation, route }) {
             <View style={[styles.corner, styles.tr]} />
             <View style={[styles.corner, styles.bl]} />
             <View style={[styles.corner, styles.br]} />
-
             <Ionicons name="scan-outline" size={56} color={C.textMuted} />
-
             <Text style={styles.vfHint}>Point at ingredient label</Text>
             </View>
 
@@ -248,7 +243,6 @@ export default function ScanScreen({ navigation, route }) {
             <Ionicons name="camera-outline" size={18} color={C.cyan || '#20964a'} />
             <Text style={styles.compareBtnTxt}>Camera</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.compareBtn} onPress={() => pickFront('gallery')}>
             <Ionicons name="image-outline" size={18} color={C.cyan || '#20964a'} />
             <Text style={styles.compareBtnTxt}>Gallery</Text>
@@ -259,7 +253,6 @@ export default function ScanScreen({ navigation, route }) {
 
             <View style={[styles.compareCard, !frontUri && { opacity: 0.35 }]}>
             <Text style={styles.compareCardTitle}>② Back Label (Ingredients)</Text>
-
             <View style={styles.compareBtns}>
             <TouchableOpacity
             style={styles.compareBtn}
@@ -269,7 +262,6 @@ export default function ScanScreen({ navigation, route }) {
             <Ionicons name="camera-outline" size={18} color={C.cyan || '#20964a'} />
             <Text style={styles.compareBtnTxt}>Camera</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
             style={styles.compareBtn}
             onPress={() => frontUri && pickBack('gallery')}
@@ -286,25 +278,16 @@ export default function ScanScreen({ navigation, route }) {
             </ScrollView>
         </View>
         </SafeAreaView>
-        );
+    );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg || '#ffffff' },
-    scroll: { padding: 20, paddingTop: 60, paddingBottom: 30 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    greeting: { fontSize: 20, fontWeight: '800', color: C.text || '#000' },
-    headerSub: { fontSize: 13, color: C.textSub || '#666', marginTop: 2 },
-    avatarBtn: { borderRadius: 22 },
-    avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#fff', fontWeight: '900', fontSize: 18 },
-    
-    // NEW EMPTY STATE STYLES
+    scroll: { padding: 20, paddingBottom: 30 },
     emptyCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface || '#fff', borderRadius: 20, padding: 18, marginBottom: 20, borderWidth: 1, borderColor: C.border || '#eee' },
     emptyIconBg: { width: 48, height: 48, borderRadius: 24, backgroundColor: (C.cyan || '#20964a') + '22', justifyContent: 'center', alignItems: 'center' },
     emptyTitle: { color: C.text || '#000', fontSize: 16, fontWeight: '800' },
     emptySub: { color: C.textSub || '#666', fontSize: 13, marginTop: 4, lineHeight: 18 },
-    
     statsRow: { flexDirection: 'row', marginBottom: 20 },
     statPill: { flex: 1, backgroundColor: C.surface || '#fff', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1, borderColor: C.border || '#eee', alignItems: 'center' },
     statVal: { fontSize: 22, fontWeight: '900', color: C.cyan || '#20964a' },
@@ -332,7 +315,7 @@ const styles = StyleSheet.create({
     outlineBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 54, borderRadius: 50, borderWidth: 1.5, borderColor: C.cyan || '#20964a' },
     outlineBtnTxt: { color: C.cyan || '#20964a', fontWeight: '700', fontSize: 15 },
     compareInfo: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: C.surface || '#fff', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: C.border || '#eee' },
-    compareInfoTxt: { color: C.textSub || '#666', fontSize: 13, lineHeight: 20, flex: 1 },
+    compareInfoTxt: { color: C.textSub || '#666', fontSize: 13, lineHeight: 20, flex: 1, marginLeft: 8 },
     compareCard: { backgroundColor: C.surface || '#fff', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border || '#eee' },
     compareCardTitle: { color: C.text || '#000', fontWeight: '700', fontSize: 14, marginBottom: 12 },
     compareImg: { height: 110, borderRadius: 12, resizeMode: 'cover' },
@@ -340,64 +323,25 @@ const styles = StyleSheet.create({
     compareBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: C.elevated || '#f5f5f5', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.border || '#eee' },
     compareBtnTxt: { color: C.cyan || '#20964a', fontWeight: '600', fontSize: 13, marginLeft: 6 },
     appBar: {
-    height: 65,
-    backgroundColor: C.cyan || '#20964a',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    elevation: 6,
+        height: 65,
+        backgroundColor: C.cyan || '#20964a',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
-
-    topAvatarBtn: {
-    borderRadius: 20,
-    },
-
-    appTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    },
-
-    topAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    },
-
-    topAvatarText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 16,
-    },
-
-    hero: {
-    marginTop: 50,
-    marginBottom: 90,
-    },
-
-    heroGreeting: {
-    fontSize: 44,
-    color: C.text || '#000',
-    fontWeight: '900',
-    lineHeight: 50,
-    },
-
-    heroName: {
-    fontSize: 44,
-    fontWeight: '900',
-    color: C.text || '#000',
-    lineHeight: 50,
-    },
-
-    heroSub: {
-    fontSize: 16,
-    color: C.textSub || '#666',
-    marginTop: 12,
-    maxWidth: '85%'},
-    
-    safe:{flex:1, backgroundColor:C.bg || '#ffffff'},
+    topAvatarBtn: { borderRadius: 20 },
+    appTitle: { color: '#fff', fontSize: 20, fontWeight: '800', letterSpacing: 1.5 },
+    topAvatar: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+    topAvatarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
+    hero: { marginTop: 24, marginBottom: 28 },
+    heroGreeting: { fontSize: 36, color: C.text || '#000', fontWeight: '900', lineHeight: 42 },
+    heroName: { fontSize: 36, fontWeight: '900', color: C.cyan || '#20964a', lineHeight: 42 },
+    heroSub: { fontSize: 15, color: C.textSub || '#666', marginTop: 10, maxWidth: '85%', lineHeight: 22 },
+    safe: { flex: 1, backgroundColor: C.bg || '#ffffff' },
 });

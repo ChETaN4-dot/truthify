@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, StatusBar, Animated } from 'react-native';
-import { C } from '../constants/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { analyzeImageWithGroq } from '../services/groqApi';
 import { prepareImageForOCR } from '../utils/imageProcessor';
 import { getProfile } from '../utils/storage';
@@ -16,7 +16,8 @@ const STEPS = [
     { id: 8, icon: '✨', text: 'Analysis complete!' },
 ];
 
-function StepLine({ step, active, done }) {
+// StepLine now receives C as a prop so it can access colors without calling useTheme at module level
+function StepLine({ step, active, done, C }) {
     const opacity = useRef(new Animated.Value(0)).current;
     useEffect(() => {
         if (active || done) {
@@ -25,10 +26,10 @@ function StepLine({ step, active, done }) {
     }, [active, done]);
 
     return (
-        <Animated.View style={[styles.stepRow, { opacity }]}>
-            <Text style={styles.stepIcon}>{step.icon}</Text>
+        <Animated.View style={[stepStyles.stepRow, { opacity }]}>
+            <Text style={stepStyles.stepIcon}>{step.icon}</Text>
             <Text style={[
-                styles.stepText,
+                stepStyles.stepText,
                 done && { color: C.textSub },
                 active && { color: C.cyan }
             ]}>
@@ -40,7 +41,17 @@ function StepLine({ step, active, done }) {
     );
 }
 
+// Separate static styles for StepLine that don't depend on theme
+const stepStyles = StyleSheet.create({
+    stepRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    stepIcon: { fontSize: 16, marginRight: 10, width: 24 },
+    stepText: { color: '#9ABFAD', fontSize: 13, fontFamily: 'monospace', flex: 1 },
+});
+
 export default function ProcessingScreen({ route, navigation }) {
+    const { C } = useTheme();
+    const styles = getStyles(C);
+
     const { imageUri, mode, frontBase64 } = route.params;
     const [currentStep, setCurrentStep] = useState(0);
     const [extractedPreview, setExtractedPreview] = useState('');
@@ -56,16 +67,15 @@ export default function ProcessingScreen({ route, navigation }) {
             await delay(400);
 
             setCurrentStep(2);
-            // Prepare the back label image (main scan)
             const base64 = await prepareImageForOCR(imageUri);
 
             setCurrentStep(3);
             const profile = await getProfile();
 
             setCurrentStep(4);
-            // Single Groq vision call does OCR + analysis + regional explanations
-            setCurrentStep(5);
+            await delay(300);
 
+            setCurrentStep(5);
             const analysis = await analyzeImageWithGroq(
                 base64,
                 profile,
@@ -133,6 +143,7 @@ export default function ProcessingScreen({ route, navigation }) {
                                 step={step}
                                 active={stepNum === currentStep}
                                 done={stepNum < currentStep}
+                                C={C}
                             />
                         );
                     })}
@@ -162,7 +173,7 @@ export default function ProcessingScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C) => StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg, padding: 24, paddingTop: 70 },
     header: { marginBottom: 24 },
     title: { fontSize: 28, fontWeight: '900', color: C.text },
@@ -178,9 +189,6 @@ const styles = StyleSheet.create({
     dot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
     terminalTitle: { color: C.textSub, fontSize: 11, marginLeft: 8, fontFamily: 'monospace' },
     terminalBody: { padding: 16 },
-    stepRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    stepIcon: { fontSize: 16, marginRight: 10, width: 24 },
-    stepText: { color: C.text, fontSize: 13, fontFamily: 'monospace', flex: 1 },
     cursor: { color: C.cyan, fontSize: 18, marginTop: 4 },
     ocrBox: {
         backgroundColor: '#080814', borderRadius: 14, padding: 14,

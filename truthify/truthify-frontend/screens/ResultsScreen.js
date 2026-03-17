@@ -12,7 +12,7 @@ import IngredientsPieChart from '../components/IngredientsPieChart';
 
 // Backend API Imports
 import { getAuth } from '../utils/storage';
-import { saveUserScan } from '../src/api/client';
+import { saveUserScan, getUserProfile } from '../src/api/client';
 
 const LANGS = ['Hinglish', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati', 'Kannada', 'Malayalam'];
 
@@ -21,7 +21,8 @@ export default function ResultsScreen({ route, navigation }) {
     const styles = getStyles(C);
 
     const { analysis, imageUri, compareMode } = route.params;
-    const [selectedLang, setSelectedLang] = useState('Hinglish');
+    const [selectedLang, setSelectedLang] = useState('English');
+    const [userPrefs, setUserPrefs] = useState({});
     const [showAllSafe, setShowAllSafe] = useState(false);
     const [saved, setSaved] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -29,43 +30,64 @@ export default function ResultsScreen({ route, navigation }) {
     useEffect(() => {
         Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
 
-        const saveToCloud = async () => {
-            if (!saved) {
-                try {
-                    const user = await getAuth();
-                    if (user && user._id) {
+        const syncWithCloud = async () => {
+            try {
+                const user = await getAuth();
+                if (user && user._id) {
+                    
+                    // 1. FETCH USER PROFILE
+                    const profileResult = await getUserProfile(user._id);
+                    if (profileResult.success && profileResult.profile) {
+                        const { language, preferences } = profileResult.profile;
+                        if (language && LANGS.includes(language)) {
+                            setSelectedLang(language);
+                        } else if (language === 'English' && LANGS.includes('Hinglish')) {
+                            setSelectedLang('Hinglish');
+                        }
+                        if (preferences) setUserPrefs(preferences);
+                    }
+
+                    // 2. SAVE SCAN TO MONGODB
+                    if (!saved) {
                         const payload = {
                             userId: user._id,
                             ...analysis,
                             imageUri: imageUri || null
                         };
                         const result = await saveUserScan(payload);
-                        if (result.success) {
-                            console.log('✅ Successfully saved to MongoDB!');
-                        } else {
-                            console.log('❌ Failed to save to MongoDB:', result.message);
-                        }
+                        if (result.success) console.log('✅ Successfully saved to MongoDB!');
+                        setSaved(true);
                     }
-                    setSaved(true);
-                } catch (error) {
-                    console.error('Error saving to cloud:', error);
-                    setSaved(true);
                 }
+            } catch (error) {
+                console.error('Error syncing with cloud:', error);
+                setSaved(true);
             }
         };
-        saveToCloud();
+        
+        syncWithCloud();
     }, []);
 
     const safe = analysis.safeIngredients || [];
     const visibleSafe = showAllSafe ? safe : safe.slice(0, 3);
     const suitability = analysis.suitableFor || {};
 
+    // 🌟 COUNT VERIFIED INGREDIENTS FOR THE FSSAI BANNER 🌟
+    const allIngredients = [
+        ...(analysis.redFlagIngredients || []),
+        ...(analysis.warningIngredients || []),
+        ...(analysis.safeIngredients || [])
+    ];
+    const verifiedCount = allIngredients.filter(ing => ing.isVerified).length;
+
     const suitLabels = {
         diabetic: '🩺 Diabetic', vegan: '🌱 Vegan', glutenFree: '🌾 Gluten Free',
         lactoseFree: '🥛 Lactose Free', nutFree: '🥜 Nut Free',
+        noArtificialColors: '🎨 No Art. Colors', 
+        noPreservatives: '🧪 No Preservatives', 
+        noPalmOil: '🌴 No Palm Oil'
     };
 
-    // Section and Pill defined inside so they can close over styles
     function Section({ title, children, style: s }) {
         return (
             <View style={[styles.section, s]}>
@@ -104,6 +126,24 @@ export default function ResultsScreen({ route, navigation }) {
             {/* Score Hero */}
             <View style={styles.scoreCard}>
                 <ScoreGauge score={analysis.overallScore || 0} />
+                
+                {/* 🌟 OVERALL FSSAI VERIFICATION BANNER 🌟 */}
+                {verifiedCount > 0 ? (
+                    <View style={styles.fssaiBanner}>
+                        <Ionicons name="shield-checkmark" size={16} color={C.success} />
+                        <Text style={styles.fssaiBannerTxt}>
+                            {verifiedCount} ingredients verified by FSSAI Cloud
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={[styles.fssaiBanner, { backgroundColor: C.warning + '15', borderColor: C.warning + '44' }]}>
+                        <Ionicons name="warning-outline" size={16} color={C.warning} />
+                        <Text style={[styles.fssaiBannerTxt, { color: C.warning }]}>
+                            AI Analysis (No FSSAI matches found)
+                        </Text>
+                    </View>
+                )}
+
                 <Text style={styles.basedOn}>Based on {analysis.totalIngredients || 0} ingredients analyzed</Text>
                 <View style={styles.miniStats}>
                     <Pill label={`${(analysis.redFlagIngredients || []).length} Red Flags`} color={C.danger} />
@@ -177,16 +217,30 @@ export default function ResultsScreen({ route, navigation }) {
                 </Section>
             )}
 
-            {/* Suitability */}
+            {/* Personal Suitability */}
             <Section title="👤 Personal Suitability">
+                <Text style={{color: C.textSub, fontSize: 12, marginBottom: 12}}>
+                    Based on your saved cloud preferences
+                </Text>
                 <View style={styles.suitRow}>
-                    {Object.entries(suitLabels).map(([key, label]) => (
-                        <View key={key} style={[styles.suitChip, { borderColor: suitability[key] ? C.success : C.danger }]}>
-                            <Text style={{ color: suitability[key] ? C.success : C.danger, fontSize: 12, fontWeight: '700' }}>
-                                {suitability[key] ? '✓' : '✗'}  {label}
-                            </Text>
-                        </View>
-                    ))}
+                    {Object.entries(suitLabels).map(([key, label]) => {
+                        const isSuitable = suitability[key]; 
+                        const dbKey = key === 'nutFree' ? 'nutAllergy' : key; 
+                        const isUserPreference = userPrefs[dbKey] === true;
+
+                        const chipStyle = isUserPreference 
+                            ? [styles.suitChip, styles.suitChipImportant, { borderColor: isSuitable ? C.success : C.danger, backgroundColor: (isSuitable ? C.success : C.danger) + '15' }]
+                            : [styles.suitChip, { borderColor: isSuitable ? C.success : C.danger }];
+
+                        return (
+                            <View key={key} style={chipStyle}>
+                                {isUserPreference && <Text style={{fontSize: 10, marginBottom: 2, color: isSuitable ? C.success : C.danger, fontWeight: '800'}}>YOUR PROFILE</Text>}
+                                <Text style={{ color: isSuitable ? C.success : C.danger, fontSize: 12, fontWeight: '700' }}>
+                                    {isSuitable ? '✓' : '✗'}  {label}
+                                </Text>
+                            </View>
+                        );
+                    })}
                 </View>
             </Section>
 
@@ -209,7 +263,9 @@ export default function ResultsScreen({ route, navigation }) {
                         ))}
                     </ScrollView>
                     <View style={styles.langBox}>
-                        <Text style={styles.langText}>{analysis.regionalExplanations[selectedLang] || 'Not available'}</Text>
+                        <Text style={styles.langText}>
+                            {analysis.regionalExplanations[selectedLang] || analysis.regionalExplanations['Hinglish'] || 'Translation not available'}
+                        </Text>
                     </View>
                 </Section>
             )}
@@ -226,7 +282,7 @@ export default function ResultsScreen({ route, navigation }) {
                 </Section>
             )}
 
-            {/* Fun Fact */}
+            {/* 🌟 RESTORED: Fun Fact 🌟 */}
             {analysis.funFact && (
                 <View style={styles.funFactCard}>
                     <Text style={styles.funFactLabel}>💡 DID YOU KNOW?</Text>
@@ -234,7 +290,7 @@ export default function ResultsScreen({ route, navigation }) {
                 </View>
             )}
 
-            {/* Safety Tip */}
+            {/* 🌟 RESTORED: Safety Tip 🌟 */}
             {analysis.safetyTip && (
                 <View style={styles.safetyTipCard}>
                     <Text style={styles.safetyTipLabel}>🛡️ SAFETY TIP</Text>
@@ -242,7 +298,7 @@ export default function ResultsScreen({ route, navigation }) {
                 </View>
             )}
 
-            {/* Extracted Text */}
+            {/* 🌟 RESTORED: Extracted Text 🌟 */}
             {analysis.extractedText && (
                 <Section title="📄 Extracted Label Text">
                     <View style={styles.ocrBox}>
@@ -278,7 +334,12 @@ const getStyles = (C) => StyleSheet.create({
     productMeta: { fontSize: 12, color: C.textSub, marginTop: 3 },
     chatBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
     scoreCard: { backgroundColor: C.surface, borderRadius: 24, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: C.border },
-    basedOn: { color: C.textSub, fontSize: 12, marginTop: 10, marginBottom: 14 },
+    
+    // FSSAI Banner
+    fssaiBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.success + '15', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: C.success + '44' },
+    fssaiBannerTxt: { color: C.success, fontWeight: '800', fontSize: 13, marginLeft: 8, letterSpacing: 0.3 },
+    
+    basedOn: { color: C.textSub, fontSize: 12, marginTop: 14, marginBottom: 14 },
     miniStats: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
     pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
     pillText: { fontSize: 12, fontWeight: '700' },
@@ -298,6 +359,7 @@ const getStyles = (C) => StyleSheet.create({
     showMoreTxt: { color: C.cyan, fontSize: 13, fontWeight: '600' },
     suitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     suitChip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+    suitChipImportant: { borderWidth: 2 },
     summaryBox: { backgroundColor: C.elevated, borderRadius: 14, padding: 16, borderLeftWidth: 3, borderLeftColor: C.cyan },
     summaryText: { color: C.textSub, fontSize: 14, lineHeight: 22 },
     langChip: { backgroundColor: C.elevated, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, marginRight: 8, borderWidth: 1, borderColor: C.border },
@@ -307,10 +369,8 @@ const getStyles = (C) => StyleSheet.create({
     langText: { color: C.text, fontSize: 14, lineHeight: 22 },
     altRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border },
     altText: { color: C.textSub, fontSize: 14, marginLeft: 10 },
-    scanImg: { height: 160, borderRadius: 14, resizeMode: 'cover' },
-    chatCta: { borderRadius: 50, overflow: 'hidden', marginTop: 8 },
-    chatCtaGrad: { height: 54, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    chatCtaTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
+    
+    // 🌟 RESTORED STYLES 🌟
     funFactCard: { backgroundColor: C.warning + '11', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.warning + '44', borderLeftWidth: 3, borderLeftColor: C.warning },
     funFactLabel: { color: C.warning, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
     funFactText: { color: C.text, fontSize: 14, lineHeight: 22 },
@@ -319,4 +379,9 @@ const getStyles = (C) => StyleSheet.create({
     safetyTipText: { color: C.text, fontSize: 14, lineHeight: 22 },
     ocrBox: { backgroundColor: '#080814', borderRadius: 12, padding: 12 },
     ocrText: { color: C.cyan, fontSize: 11, fontFamily: 'monospace', lineHeight: 18 },
+    scanImg: { height: 160, borderRadius: 14, resizeMode: 'cover' },
+    
+    chatCta: { borderRadius: 50, overflow: 'hidden', marginTop: 8 },
+    chatCtaGrad: { height: 54, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    chatCtaTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

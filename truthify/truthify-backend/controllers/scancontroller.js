@@ -39,3 +39,20 @@ exports.getUserHistory = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to fetch history from database' });
     }
 };
+// 3. Delete a scan from history
+exports.deleteScan = async (req, res) => {
+    try {
+        const { scanId } = req.params;
+        
+        const deletedScan = await Scan.findByIdAndDelete(scanId);
+        
+        if (!deletedScan) {
+            return res.status(404).json({ success: false, message: 'Scan not found' });
+        }
+
+        res.status(200).json({ success: true, message: 'Scan deleted successfully' });
+    } catch (error) {
+        console.error('Delete Scan Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete scan from database' });
+    }
+};

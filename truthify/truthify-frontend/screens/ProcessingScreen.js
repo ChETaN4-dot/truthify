@@ -5,18 +5,20 @@ import { analyzeImageWithGroq } from '../services/groqApi';
 import { prepareImageForOCR } from '../utils/imageProcessor';
 import { getProfile } from '../utils/storage';
 
+// 🌟 1. IMPORT YOUR NEW CLOUD API CALL 🌟
+import { getFssaiRules } from '../src/api/client';
+
 const STEPS = [
     { id: 1, icon: '📸', text: 'Image captured...' },
     { id: 2, icon: '🔍', text: 'Preparing image for AI...' },
-    { id: 3, icon: '🧠', text: 'Sending to Groq Vision AI...' },
-    { id: 4, icon: '📝', text: 'Reading label text...' },
+    { id: 3, icon: '☁️', text: 'Syncing FSSAI Cloud Rules...' }, // 👈 Updated text!
+    { id: 4, icon: '🧠', text: 'Sending to Groq Vision AI...' },
     { id: 5, icon: '⚗️', text: 'Analyzing ingredients...' },
-    { id: 6, icon: '🔎', text: 'Checking for greenwashing...' },
+    { id: 6, icon: '🛡️', text: 'Verifying with FSSAI regulations...' },
     { id: 7, icon: '🌍', text: 'Generating regional explanations...' },
     { id: 8, icon: '✨', text: 'Analysis complete!' },
 ];
 
-// StepLine now receives C as a prop so it can access colors without calling useTheme at module level
 function StepLine({ step, active, done, C }) {
     const opacity = useRef(new Animated.Value(0)).current;
     useEffect(() => {
@@ -41,12 +43,35 @@ function StepLine({ step, active, done, C }) {
     );
 }
 
-// Separate static styles for StepLine that don't depend on theme
 const stepStyles = StyleSheet.create({
     stepRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     stepIcon: { fontSize: 16, marginRight: 10, width: 24 },
     stepText: { color: '#9ABFAD', fontSize: 13, fontFamily: 'monospace', flex: 1 },
 });
+
+// 🌟 2. UPDATED VERIFICATION FUNCTION (Now accepts the cloud database) 🌟
+const verifyWithFSSAI = (ingredients, liveCloudDb) => {
+    if (!ingredients || !Array.isArray(ingredients)) return [];
+    
+    return ingredients.map(ing => {
+        const key = (ing.name || '').toLowerCase(); 
+        
+        // Check against the LIVE database we just downloaded!
+        if (liveCloudDb[key]) {
+            return {
+                ...ing,
+                technicalName: liveCloudDb[key].technicalName,
+                severity: liveCloudDb[key].severity,
+                healthEffect: liveCloudDb[key].healthEffect,
+                reason: `FSSAI Limit: ${liveCloudDb[key].fssaiLimit}`,
+                isVerified: true, 
+                source: liveCloudDb[key].source
+            };
+        }
+        
+        return { ...ing, isVerified: false };
+    });
+};
 
 export default function ProcessingScreen({ route, navigation }) {
     const { C } = useTheme();
@@ -69,25 +94,37 @@ export default function ProcessingScreen({ route, navigation }) {
             setCurrentStep(2);
             const base64 = await prepareImageForOCR(imageUri);
 
+            // 🌟 3. FETCH PROFILE AND LIVE FSSAI RULES FROM MONGODB 🌟
             setCurrentStep(3);
             const profile = await getProfile();
+            const fssaiResult = await getFssaiRules(); 
+            const liveFssaiDb = fssaiResult.success ? fssaiResult.data : {}; // Store the cloud dictionary
 
             setCurrentStep(4);
             await delay(300);
 
             setCurrentStep(5);
-            const analysis = await analyzeImageWithGroq(
+            let analysis = await analyzeImageWithGroq(
                 base64,
                 profile,
                 profile?.language || 'English',
                 mode === 'compare' ? frontBase64 : null
             );
 
+            // 🌟 4. PASS THE CLOUD DB INTO THE VERIFIER 🌟
             setCurrentStep(6);
-            if (analysis.extractedText) {
-                setExtractedPreview(analysis.extractedText.slice(0, 300));
+            if (analysis) {
+                if (analysis.redFlagIngredients) {
+                    analysis.redFlagIngredients = verifyWithFSSAI(analysis.redFlagIngredients, liveFssaiDb);
+                }
+                if (analysis.warningIngredients) {
+                    analysis.warningIngredients = verifyWithFSSAI(analysis.warningIngredients, liveFssaiDb);
+                }
+                if (analysis.extractedText) {
+                    setExtractedPreview(analysis.extractedText.slice(0, 300));
+                }
             }
-            await delay(400);
+            await delay(600); 
 
             setCurrentStep(7);
             await delay(400);

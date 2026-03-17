@@ -1,0 +1,50 @@
+{
+  "ins 476": {
+    "technicalName": "Polyglycerol Polyricinoleate (PGPR)",
+    "category": "Emulsifier",
+    "severity": "MEDIUM",
+    "healthEffect": "Used to replace expensive cocoa butter. Safe in small amounts, but overconsumption can cause mild gastrointestinal issues.",
+    "fssaiLimit": "Max 5g/kg in chocolates",
+    "source": "FSSAI / Codex Alimentarius"
+  },
+  "ins 442": {
+    "technicalName": "Ammonium Salts of Phosphatidic Acid",
+    "category": "Emulsifier",
+    "severity": "LOW",
+    "healthEffect": "Improves flow of chocolate during manufacturing. Considered safe within limits, but indicates a highly processed product.",
+    "fssaiLimit": "Max 10g/kg in cocoa products",
+    "source": "FSSAI"
+  },
+  "ins 102": {
+    "technicalName": "Tartrazine",
+    "category": "Synthetic Color (Yellow)",
+    "severity": "HIGH",
+    "healthEffect": "Known to cause allergic reactions and hyperactivity in sensitive children.",
+    "fssaiLimit": "Max 100mg/kg. Must carry a warning label.",
+    "source": "FSSAI Food Safety and Standards (Food Products Standards and Food Additives) Regulations"
+  },
+  "ins 621": {
+    "technicalName": "Monosodium Glutamate (MSG)",
+    "category": "Flavor Enhancer",
+    "severity": "MEDIUM",
+    "healthEffect": "Can cause headaches or numbness in sensitive individuals. Unsafe for infants.",
+    "fssaiLimit": "Not permitted in pastas and noodles meant for infants. Must declare 'Contains MSG'.",
+    "source": "FSSAI Labeling Regulations"
+  },
+  "high fructose corn syrup": {
+    "technicalName": "High Fructose Corn Syrup (HFCS)",
+    "category": "Sweetener",
+    "severity": "HIGH",
+    "healthEffect": "Spikes blood sugar rapidly. Linked to insulin resistance, obesity, and fatty liver disease.",
+    "fssaiLimit": "Must be declared on nutritional label under Total Sugars.",
+    "source": "WHO Guidelines on Sugar Intake"
+  },
+  "hydrogenated vegetable oil": {
+    "technicalName": "Trans Fat / Partially Hydrogenated Oil",
+    "category": "Fat",
+    "severity": "HIGH",
+    "healthEffect": "Significantly increases bad cholesterol (LDL) and lowers good cholesterol (HDL). Major risk for heart disease.",
+    "fssaiLimit": "FSSAI limits trans fats to not more than 2% by weight in fats/oils.",
+    "source": "FSSAI Trans Fat Regulations 2021"
+  }
+}

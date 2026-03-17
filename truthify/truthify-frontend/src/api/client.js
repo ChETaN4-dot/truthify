@@ -57,6 +57,20 @@ export const getUserHistory = async (userId) => {
     return { success: false, history: [] };
   }
 };
+// Delete a specific scan from MongoDB
+export const deleteUserScan = async (scanId) => {
+  try {
+    const url = BASE_URL.replace('/auth', '') + `/scans/history/${scanId}`;
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Delete Scan API Error:', error);
+    return { success: false, message: 'Network error.' };
+  }
+};
 // 4. Save a New Scan to MongoDB
 export const saveUserScan = async (scanData) => {
   try {
@@ -106,5 +120,23 @@ export const updateUserPreferences = async (userId, profileData) => {
   } catch (error) {
     console.error('Update Preferences API Error:', error);
     return { success: false, message: 'Network error while saving preferences.' };
+  }
+};
+// ==========================================
+// 🛡️ FSSAI CLOUD VERIFICATION API 🌟
+// ==========================================
+
+// 6. Fetch live FSSAI database from MongoDB
+export const getFssaiRules = async () => {
+  try {
+    // Replaces '/auth' so it points to POST /api/fssai
+    const url = BASE_URL.replace('/auth', '') + `/fssai`;
+    
+    const response = await fetch(url);
+    return await response.json();
+  } catch (error) {
+    console.error('Fetch FSSAI API Error:', error);
+    // If the cloud fails, we return an empty object so the app doesn't crash
+    return { success: false, data: {} }; 
   }
 };

@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    Alert, TextInput, StatusBar, ActivityIndicator
+    TextInput, StatusBar, ActivityIndicator, Modal, Animated
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 // Backend Imports
 import { getAuth } from '../utils/storage';
-import { getUserHistory } from '../src/api/client';
+import { getUserHistory, deleteUserScan } from '../src/api/client'; 
 
 const FILTERS = ['All', 'This Week', 'High Risk', 'Safe'];
 
@@ -17,13 +17,16 @@ export default function HistoryScreen({ navigation }) {
     const { C } = useTheme();
     const styles = getStyles(C);
 
-    // getColor now lives inside component where C is in scope
     const getColor = (s) => s >= 70 ? C.success : s >= 40 ? C.warning : C.danger;
 
     const [scans, setScans] = useState([]);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('All');
     const [loading, setLoading] = useState(true);
+
+    // 🌟 CUSTOM ANIMATED MODAL STATE 🌟
+    const [deleteModal, setDeleteModal] = useState({ visible: false, id: null });
+    const scaleAnim = useRef(new Animated.Value(0)).current;
 
     useFocusEffect(useCallback(() => {
         const fetchCloudHistory = async () => {
@@ -40,9 +43,41 @@ export default function HistoryScreen({ navigation }) {
         fetchCloudHistory();
     }, []));
 
-    const handleDelete = (id) => Alert.alert('Delete', 'Delete feature needs backend API!', [
-        { text: 'OK', style: 'cancel' }
-    ]);
+    // 🌟 OPEN ANIMATED MODAL 🌟
+    const openDeleteModal = (id) => {
+        setDeleteModal({ visible: true, id });
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 6,
+            tension: 40,
+            useNativeDriver: true
+        }).start();
+    };
+
+    // 🌟 CLOSE ANIMATED MODAL 🌟
+    const closeDeleteModal = () => {
+        Animated.timing(scaleAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true
+        }).start(() => setDeleteModal({ visible: false, id: null }));
+    };
+
+    // 🌟 EXECUTE DELETE 🌟
+    const confirmDelete = async () => {
+        const idToDelete = deleteModal.id;
+        closeDeleteModal(); // Instantly hide the popup
+
+        // 1. Optimistically hide it from the UI instantly for a snappy feel
+        setScans(prevScans => prevScans.filter(s => s._id !== idToDelete));
+        
+        // 2. Tell the cloud to actually delete it
+        const result = await deleteUserScan(idToDelete);
+        if (!result.success) {
+            // If the cloud fails, you could show a toast here, but usually, it's fine!
+            console.log("Failed to delete from cloud");
+        }
+    };
 
     const now = Date.now();
     const filtered = scans.filter(s => {
@@ -58,8 +93,7 @@ export default function HistoryScreen({ navigation }) {
         <TouchableOpacity
             style={styles.card}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('Results', { analysis: item, imageUri: item.imageUri })}
-            onLongPress={() => handleDelete(item._id)}
+            onPress={() => navigation.navigate('Scan', { screen: 'Results', params: { analysis: item, imageUri: item.imageUri } })}
         >
             <View style={[styles.scoreBadge, { backgroundColor: getColor(item.overallScore) + '22' }]}>
                 <Text style={[styles.scoreVal, { color: getColor(item.overallScore) }]}>{item.overallScore}</Text>
@@ -69,7 +103,14 @@ export default function HistoryScreen({ navigation }) {
                 <Text style={styles.meta}>{new Date(item.createdAt || item.timestamp).toLocaleDateString('en-IN')} · {item.productCategory || 'Product'}</Text>
                 <Text style={styles.flags}>{(item.redFlagIngredients || []).length} red flags found</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+            
+            {/* 🌟 TRASH BUTTON THAT OPENS CUSTOM MODAL 🌟 */}
+            <TouchableOpacity 
+                style={{ padding: 10, backgroundColor: C.danger + '15', borderRadius: 10 }} 
+                onPress={() => openDeleteModal(item._id)}
+            >
+                <Ionicons name="trash-outline" size={20} color={C.danger} />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 
@@ -118,6 +159,28 @@ export default function HistoryScreen({ navigation }) {
                     showsVerticalScrollIndicator={false}
                 />
             )}
+
+            {/* 🌟 CUSTOM ANIMATED DELETE MODAL 🌟 */}
+            <Modal transparent visible={deleteModal.visible} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <Animated.View style={[styles.modalContent, { transform: [{ scale: scaleAnim }] }]}>
+                        <View style={styles.modalIconWrap}>
+                            <Ionicons name="trash" size={32} color={C.danger} />
+                        </View>
+                        <Text style={styles.modalTitle}>Delete Scan?</Text>
+                        <Text style={styles.modalSubTxt}>This action cannot be undone. It will be permanently removed from your cloud history.</Text>
+                        
+                        <View style={styles.modalBtnRow}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={closeDeleteModal}>
+                                <Text style={styles.cancelBtnTxt}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.confirmBtn} onPress={confirmDelete}>
+                                <Text style={styles.confirmBtnTxt}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -146,4 +209,16 @@ const getStyles = (C) => StyleSheet.create({
     empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyTitle: { color: C.text, fontSize: 18, fontWeight: '700', marginTop: 12 },
     emptySub: { color: C.textSub, fontSize: 14, marginTop: 4 },
+    
+    // 🌟 CUSTOM MODAL STYLES 🌟
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalContent: { backgroundColor: C.surface, borderRadius: 24, padding: 24, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    modalIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.danger + '15', justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: C.danger + '44' },
+    modalTitle: { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 8 },
+    modalSubTxt: { fontSize: 14, color: C.textSub, textAlign: 'center', lineHeight: 22, marginBottom: 24, paddingHorizontal: 10 },
+    modalBtnRow: { flexDirection: 'row', gap: 12 },
+    cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: C.elevated, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    cancelBtnTxt: { color: C.text, fontSize: 15, fontWeight: '700' },
+    confirmBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: C.danger, alignItems: 'center' },
+    confirmBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

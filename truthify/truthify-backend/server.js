@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const fssaiRoutes = require('./routes/fssairoutes');
 
 connectDB();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/authroutes'));
 app.use('/api/scans', require('./routes/scanroutes'));
 app.use('/api/profile', require('./routes/profileroutes'));
+app.use('/api/fssai', fssaiRoutes);
 
 app.get('/', (req, res) => {
   res.send('TRUTHIFY Backend is ALIVE!');

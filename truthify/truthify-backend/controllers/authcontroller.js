@@ -1,21 +1,32 @@
-// truthify-backend/controllers/authController.js - MOCKED FOR DEMO
-// This version bypasses MongoDB to allow the frontend demo to work
+// truthify-backend/controllers/authcontroller.js
+const User = require('../models/User');
 
 exports.register = async (req, res) => {
   try {
     const { name, pin } = req.body;
+
     if (!name || !pin) {
       return res.status(400).json({ success: false, message: 'Name and PIN are required' });
     }
 
-    console.log('--- Mock Register Triggered ---');
-    const userResponse = {
-      _id: "mock_user_" + Date.now(),
+    const userExists = await User.findOne({ name: name.trim() });
+    
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists. Please log in.' });
+    }
+
+    const user = await User.create({
       name: name.trim(),
-      preferences: {}
+      pin: pin.toString() 
+    });
+
+    const userResponse = {
+      _id: user._id,
+      name: user.name,
+      preferences: user.preferences
     };
 
-    return res.status(201).json({ success: true, message: 'Account created successfully (Mock)', user: userResponse });
+    return res.status(201).json({ success: true, message: 'Account created successfully', user: userResponse });
   } catch (error) {
     console.error('Register Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -25,18 +36,29 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { name, pin } = req.body;
+
     if (!name || !pin) {
       return res.status(400).json({ success: false, message: 'Name and PIN are required' });
     }
 
-    console.log('--- Mock Login Triggered ---');
-    const userResponse = {
-      _id: "mock_user_123",
-      name: name.trim(),
-      preferences: {}
-    };
+    const user = await User.findOne({ name: name.trim() });
 
-    return res.status(200).json({ success: true, message: 'Login successful (Mock)', user: userResponse });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found. Please sign up first.' });
+    }
+
+    const isMatch = await user.matchPin(pin);
+    
+    if (isMatch) {
+      const userResponse = {
+        _id: user._id,
+        name: user.name,
+        preferences: user.preferences
+      };
+      return res.status(200).json({ success: true, message: 'Login successful', user: userResponse });
+    } else {
+      return res.status(401).json({ success: false, message: 'Incorrect PIN. Try again.' });
+    }
   } catch (error) {
     console.error('Login Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

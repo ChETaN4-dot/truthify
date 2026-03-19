@@ -41,6 +41,9 @@
   },
   "private": true,
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/types": "^7.29.0",
+    "@expo/cli": "^55.0.17",
     "babel-preset-expo": "^54.0.10"
   }
 }

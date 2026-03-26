@@ -1,35 +1,34 @@
-// truthify-backend/controllers/scancontroller.js - MOCKED FOR DEMO
+const Scan = require('../models/scan');
+
 exports.saveScan = async (req, res) => {
     try {
-        console.log('--- Mock Saving Scan ---');
-        res.status(201).json({ success: true, message: 'Scan saved (Mock)' });
+        const { userId, ...scanData } = req.body;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'User ID is required' });
+        }
+
+        // Create a new scan linked to this user
+        const newScan = await Scan.create({
+            userId,
+            ...scanData
+        });
+
+        res.status(201).json({ success: true, message: 'Scan saved to your history!', scan: newScan });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to save scan' });
+        console.error('Save Scan Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to save scan to cloud' });
     }
 };
 
 exports.getUserHistory = async (req, res) => {
     try {
-        const history = [
-            {
-                _id: "scan_1",
-                productName: "Coca Cola",
-                overallScore: 22,
-                createdAt: new Date().toISOString(),
-                productCategory: "Drink",
-                redFlagIngredients: [{ name: "High Fructose Corn Syrup" }]
-            },
-            {
-                _id: "scan_2",
-                productName: "Oats",
-                overallScore: 88,
-                createdAt: new Date(Date.now() - 3600000).toISOString(),
-                productCategory: "Food",
-                redFlagIngredients: []
-            }
-        ];
+        const { userId } = req.params;
+        // Fetch all scans for this user, sorted by most recent first
+        const history = await Scan.find({ userId }).sort({ createdAt: -1 });
+        
         res.status(200).json({ success: true, history });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to fetch history' });
+        console.error('History Fetch Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch scan history' });
     }
 };

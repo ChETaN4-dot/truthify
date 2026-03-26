@@ -20,7 +20,7 @@ export default function ResultsScreen({ route, navigation }) {
     const { C } = useTheme();
     const styles = getStyles(C);
 
-    const { analysis, imageUri, compareMode } = route.params;
+    const { analysis, imageUri, compareMode, fromCache } = route.params;
     const [selectedLang, setSelectedLang] = useState('Hinglish');
     const [showAllSafe, setShowAllSafe] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -94,7 +94,12 @@ export default function ResultsScreen({ route, navigation }) {
                 </TouchableOpacity>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.productName} numberOfLines={2}>{analysis.productName || 'Unknown Product'}</Text>
-                    <Text style={styles.productMeta}>{analysis.productCategory} · {new Date().toLocaleDateString('en-IN')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                        <Text style={styles.productMeta}>
+                            {analysis.brand ? `${analysis.brand} · ` : ''}{analysis.productCategory} · {new Date().toLocaleDateString('en-IN')}
+                        </Text>
+                        {fromCache && <View style={styles.cacheBadge}><Text style={styles.cacheBadgeTxt}>⚡ CACHED</Text></View>}
+                    </View>
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('Chat', { analysis })} style={styles.chatBtn}>
                     <Ionicons name="chatbubble-ellipses-outline" size={20} color={C.cyan} />
@@ -112,6 +117,14 @@ export default function ResultsScreen({ route, navigation }) {
                 </View>
             </View>
 
+            {/* Nutrition Highlights */}
+            {analysis.nutritionHighlights && (
+                <View style={styles.nutritionCard}>
+                    <Text style={styles.nutritionLabel}>📊 NUTRITION HIGHLIGHTS</Text>
+                    <Text style={styles.nutritionText}>{analysis.nutritionHighlights}</Text>
+                </View>
+            )}
+
             {/* Ingredients Pie Chart */}
             <Section title="📊 Ingredient Breakdown">
                 <IngredientsPieChart
@@ -120,6 +133,22 @@ export default function ResultsScreen({ route, navigation }) {
                     danger={(analysis.redFlagIngredients || []).length}
                 />
             </Section>
+
+            {/* What Is It Good For */}
+            {analysis.whatIsItGoodFor && (
+                <View style={styles.goodForCard}>
+                    <Text style={styles.goodForLabel}>✅ WHAT IS IT GOOD FOR</Text>
+                    <Text style={styles.goodForText}>{analysis.whatIsItGoodFor}</Text>
+                </View>
+            )}
+
+            {/* What To Avoid / Concerns */}
+            {analysis.whatToAvoid && analysis.whatToAvoid !== 'No major concerns.' && (
+                <View style={styles.avoidCard}>
+                    <Text style={styles.avoidLabel}>⚠️ WHAT TO BE AWARE OF</Text>
+                    <Text style={styles.avoidText}>{analysis.whatToAvoid}</Text>
+                </View>
+            )}
 
             {/* Greenwashing */}
             {(analysis.greenwashingAlerts || []).length > 0 && (
@@ -275,7 +304,18 @@ const getStyles = (C) => StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
     backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
     productName: { fontSize: 20, fontWeight: '800', color: C.text },
-    productMeta: { fontSize: 12, color: C.textSub, marginTop: 3 },
+    productMeta: { fontSize: 12, color: C.textSub },
+    cacheBadge: { marginLeft: 8, backgroundColor: C.cyan + '22', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.cyan },
+    cacheBadgeTxt: { color: C.cyan, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+    goodForCard: { backgroundColor: '#0A2B1A', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.success + '55', borderLeftWidth: 4, borderLeftColor: C.success },
+    goodForLabel: { color: C.success, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
+    goodForText: { color: C.text, fontSize: 14, lineHeight: 22 },
+    avoidCard: { backgroundColor: '#2B0A0A', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.danger + '55', borderLeftWidth: 4, borderLeftColor: C.danger },
+    avoidLabel: { color: C.danger, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
+    avoidText: { color: C.text, fontSize: 14, lineHeight: 22 },
+    nutritionCard: { backgroundColor: C.elevated, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.border, borderLeftWidth: 4, borderLeftColor: '#A020F0' },
+    nutritionLabel: { color: '#A020F0', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
+    nutritionText: { color: C.text, fontSize: 14, lineHeight: 22 },
     chatBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
     scoreCard: { backgroundColor: C.surface, borderRadius: 24, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: C.border },
     basedOn: { color: C.textSub, fontSize: 12, marginTop: 10, marginBottom: 14 },

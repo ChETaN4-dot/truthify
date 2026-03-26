@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, StatusBar, Animated } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { analyzeImageWithGroq } from '../services/groqApi';
 import { prepareImageForOCR } from '../utils/imageProcessor';
@@ -75,30 +76,86 @@ export default function ProcessingScreen({ route, navigation }) {
             setCurrentStep(4);
             await delay(300);
 
-            setCurrentStep(5);
-            const analysis = await analyzeImageWithGroq(
-                base64,
-                profile,
-                profile?.language || 'English',
-                mode === 'compare' ? frontBase64 : null
-            );
-
-            setCurrentStep(6);
-            if (analysis.extractedText) {
-                setExtractedPreview(analysis.extractedText.slice(0, 300));
+            // ── Cache check: if we've seen this exact image data before, return cached result ──
+            const SCAN_CACHE_KEY = 'truthify_scan_cache';
+            const imageFingerprint = base64.slice(0, 200); // Use start of base64 as fingerprint
+            let cachedResult = null;
+            try {
+                const raw = await AsyncStorage.getItem(SCAN_CACHE_KEY);
+                const cache = raw ? JSON.parse(raw) : {};
+                // Also check all cached results for matching fingerprint
+                const entries = Object.entries(cache);
+                for (const [key, val] of entries) {
+                    if (key === imageFingerprint) {
+                        cachedResult = val;
+                        console.log('⚡ Cache hit! Returning cached result for:', val.productName);
+                        break;
+                    }
+                }
+                // Additionally, cache by image fingerprint when we get a new result
+                if (!cachedResult) {
+                    // Will cache after getting result below
+                }
+            } catch (e) {
+                console.warn('Cache read failed:', e.message);
             }
-            await delay(400);
 
-            setCurrentStep(7);
-            await delay(400);
+            let analysis;
+            let fromCache = false;
 
-            setCurrentStep(8);
-            await delay(500);
+            if (cachedResult) {
+                // Instant result from cache!
+                setCurrentStep(5);
+                await delay(200);
+                setCurrentStep(6);
+                if (cachedResult.extractedText) setExtractedPreview(cachedResult.extractedText.slice(0, 300));
+                await delay(200);
+                setCurrentStep(7);
+                await delay(200);
+                setCurrentStep(8);
+                await delay(300);
+                analysis = cachedResult;
+                fromCache = true;
+            } else {
+                setCurrentStep(5);
+                analysis = await analyzeImageWithGroq(
+                    base64,
+                    profile,
+                    profile?.language || 'English',
+                    mode === 'compare' ? frontBase64 : null
+                );
+
+                setCurrentStep(6);
+                if (analysis.extractedText) {
+                    setExtractedPreview(analysis.extractedText.slice(0, 300));
+                }
+                await delay(400);
+
+                setCurrentStep(7);
+                await delay(400);
+
+                setCurrentStep(8);
+                await delay(500);
+
+                // Cache by image fingerprint for next time
+                try {
+                    const raw = await AsyncStorage.getItem(SCAN_CACHE_KEY);
+                    let cache = raw ? JSON.parse(raw) : {};
+                    const keys = Object.keys(cache);
+                    if (keys.length >= 50) delete cache[keys[0]];
+                    cache[imageFingerprint] = analysis;
+                    await AsyncStorage.setItem(SCAN_CACHE_KEY, JSON.stringify(cache));
+                } catch (e) {
+                    console.warn('Cache write failed:', e.message);
+                }
+              fromCache = false;
+            }
 
             navigation.replace('Results', {
                 analysis,
                 imageUri,
                 compareMode: mode === 'compare',
+                fromCache,
             });
         } catch (e) {
             setError(e.message || 'Something went wrong. Please try again.');

@@ -1,4 +1,8 @@
 // truthify-backend/server.js
+// Fix for Node 18+ IPv6-first DNS breaking MongoDB SRV lookups
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');

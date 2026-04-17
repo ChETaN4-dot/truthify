@@ -14,14 +14,25 @@ import logo from '../assets/newlogo.png';
 
 const { width } = Dimensions.get('window');
 
+// 🌟 Data arrays for the animated gradient text 🌟
+const APP_NAME = "Truthify".split('');
+const GRADIENT_COLORS = [
+  '#0b2414', // Darkest green
+  '#0e311a', 
+  '#123e20', 
+  '#164c27', 
+  '#1a5a2e', 
+  '#1f6935', 
+  '#24783d', 
+  '#2ab55c'  // Lightest vibrant green
+];
+
 export default function LoginScreen({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // 🌟 NEW ERROR TOAST STATE 🌟
   const [errorMsg, setErrorMsg] = useState('');
 
   // Animations
@@ -31,9 +42,13 @@ export default function LoginScreen({ onLogin }) {
   const cardSlide = useRef(new Animated.Value(20)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current; 
   const scaleAnim = useRef(new Animated.Value(1)).current; 
-  const errorToastAnim = useRef(new Animated.Value(-150)).current; // 🌟 NEW TOAST ANIMATION 🌟
+  const errorToastAnim = useRef(new Animated.Value(-150)).current; 
+  
+  // The engine for our breathing effect
+  const flagAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Startup animations
     Animated.stagger(150, [
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
@@ -44,6 +59,15 @@ export default function LoginScreen({ onLogin }) {
         Animated.spring(cardSlide, { toValue: 0, friction: 7, tension: 50, useNativeDriver: true }),
       ]),
     ]).start();
+
+    // 🌟 Start the Emerald Breathing Loop 🌟
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(flagAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(flagAnim, { toValue: 0, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+      ])
+    ).start();
+
   }, []);
 
   const triggerShake = () => {
@@ -55,20 +79,17 @@ export default function LoginScreen({ onLogin }) {
     ]).start();
   };
 
-  // 🌟 CUSTOM ERROR TOAST FUNCTION 🌟
   const showErrorToast = (msg) => {
     setErrorMsg(msg);
-    triggerShake(); // Keep that awesome shake effect!
+    triggerShake(); 
     
-    // Slide down
     Animated.spring(errorToastAnim, {
-      toValue: 60, // Distance from top
+      toValue: 60, 
       useNativeDriver: true,
       friction: 8,
       tension: 40
     }).start();
 
-    // Slide back up after 3 seconds
     setTimeout(() => {
       Animated.timing(errorToastAnim, {
         toValue: -150,
@@ -89,7 +110,6 @@ export default function LoginScreen({ onLogin }) {
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();
-    
     if (!trimmedName || pin.length < 4) {
       showErrorToast('Please enter your name and a 4-digit PIN.');
       return;
@@ -106,26 +126,22 @@ export default function LoginScreen({ onLogin }) {
           setLoading(false); 
           return;
         }
-        
         const result = await registerUser(trimmedName, pin);
-        
         if (result.success) {
           await saveAuth(result.user); 
           await saveSession();
           onLogin(result.user.name);
         } else {
-          showErrorToast(result.message); // Show backend error beautifully
+          showErrorToast(result.message); 
         }
-        
       } else {
         const result = await loginUser(trimmedName, pin);
-        
         if (result.success) {
           await saveAuth(result.user); 
           await saveSession();
           onLogin(result.user.name);
         } else {
-          showErrorToast(result.message); // Show backend error beautifully
+          showErrorToast(result.message); 
         }
       }
     } catch (e) { 
@@ -155,7 +171,6 @@ export default function LoginScreen({ onLogin }) {
     <LinearGradient colors={['#eafbf1', '#fdfdfd']} style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      {/* 🌟 CUSTOM ANIMATED ERROR TOAST 🌟 */}
       <Animated.View style={[s.errorToastContainer, { transform: [{ translateY: errorToastAnim }] }]}>
         <LinearGradient colors={['#EF4444', '#DC2626']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.errorToastGradient}>
           <Ionicons name="warning" size={28} color="#fff" />
@@ -174,6 +189,21 @@ export default function LoginScreen({ onLogin }) {
             <View style={s.logoGlow}>
               <Image source={logo} style={s.logoHero} resizeMode="contain" />
             </View>
+            
+            {/* 🌟 Emerald Breathing Gradient Text 🌟 */}
+            <Animated.View style={[s.appNameRow, {
+                transform: [{ 
+                  scale: flagAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] }) 
+                }],
+                opacity: flagAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] })
+            }]}>
+              {APP_NAME.map((char, i) => (
+                <Text key={i} style={[s.appNameChar, { color: GRADIENT_COLORS[i] }]}>
+                  {char}
+                </Text>
+              ))}
+            </Animated.View>
+
             <Text style={s.tagline}>Verify news. Trust facts.</Text>
           </Animated.View>
 
@@ -270,7 +300,6 @@ const s = StyleSheet.create({
   container:{ flex:1 },
   scroll:{ flexGrow:1, justifyContent:'center', padding:24 },
   
-  // 🌟 NEW TOAST STYLES 🌟
   errorToastContainer: { position: 'absolute', top: 0, left: 20, right: 20, zIndex: 999 },
   errorToastGradient: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 10 },
   errorToastTextWrap: { marginLeft: 14, flex: 1 },
@@ -280,6 +309,11 @@ const s = StyleSheet.create({
   logoHero: { width: 110, height: 110 },
   logoGlow: { backgroundColor: '#ffffff', padding: 15, borderRadius: 35, shadowColor: '#20964a', shadowOpacity: 0.15, shadowRadius: 25, elevation: 10, marginBottom: 16 },
   logoWrap:{ alignItems:'center', marginBottom:35, marginTop: 40 },
+  
+  // Container for the animated letters
+  appNameRow: { flexDirection: 'row', marginBottom: 6, height: 45, alignItems: 'center' },
+  appNameChar: { fontSize: 36, fontWeight: '900', letterSpacing: 1.5 },
+  
   tagline:{ color:'#4d8565', fontSize:14, fontWeight: '600', letterSpacing: 0.5 },
 
   tabRow:{ flexDirection:'row', backgroundColor:'#dcf5e6', borderRadius:14, padding:5, marginBottom:24 },

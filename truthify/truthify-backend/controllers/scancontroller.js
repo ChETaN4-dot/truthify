@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // truthify-backend/controllers/scancontroller.js
 const Scan = require('../models/scan'); // Pulls in your real MongoDB schema
 
@@ -18,12 +19,34 @@ exports.saveScan = async (req, res) => {
     } catch (error) {
         console.error('Save Scan Error:', error);
         res.status(500).json({ success: false, message: 'Failed to save scan to database' });
+=======
+const Scan = require('../models/scan');
+
+exports.saveScan = async (req, res) => {
+    try {
+        const { userId, ...scanData } = req.body;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'User ID is required' });
+        }
+
+        // Create a new scan linked to this user
+        const newScan = await Scan.create({
+            userId,
+            ...scanData
+        });
+
+        res.status(201).json({ success: true, message: 'Scan saved to your history!', scan: newScan });
+    } catch (error) {
+        console.error('Save Scan Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to save scan to cloud' });
+>>>>>>> a9affef9a3b535cce675a7ae5ba412820c4c685c
     }
 };
 
 // 2. Fetch user's scan history
 exports.getUserHistory = async (req, res) => {
     try {
+<<<<<<< HEAD
         const { userId } = req.params; 
         
         if (!userId) {
@@ -54,5 +77,15 @@ exports.deleteScan = async (req, res) => {
     } catch (error) {
         console.error('Delete Scan Error:', error);
         res.status(500).json({ success: false, message: 'Failed to delete scan from database' });
+=======
+        const { userId } = req.params;
+        // Fetch all scans for this user, sorted by most recent first
+        const history = await Scan.find({ userId }).sort({ createdAt: -1 });
+        
+        res.status(200).json({ success: true, history });
+    } catch (error) {
+        console.error('History Fetch Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch scan history' });
+>>>>>>> a9affef9a3b535cce675a7ae5ba412820c4c685c
     }
 };
